@@ -44,6 +44,15 @@ export const gameConfig = Object.freeze({
     groundMagnetStrength: 24,
     jetDamageMultiplier: 0.45,
     modelScale: 1,
+    modelAsset: Object.freeze({
+      targetHeight: 4.35,
+      rotationY: Math.PI,
+      muzzleHeightRatio: 0.57,
+      lockHeightRatio: 0.8,
+      cameraHeightRatio: 0.74,
+      frontInsetRatio: 0.14,
+      cameraDepthRatio: 0.6,
+    }),
   },
   energy: {
     max: 100,

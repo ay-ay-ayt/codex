@@ -9,6 +9,6 @@ app.initialize().catch((error) => {
   const bootMessage = document.querySelector("[data-boot-message]");
 
   if (bootMessage) {
-    bootMessage.textContent = `起動に失敗しました: ${error instanceof Error ? error.message : String(error)}`;
+    bootMessage.textContent = `Failed to boot runtime: ${error instanceof Error ? error.message : String(error)}`;
   }
 });

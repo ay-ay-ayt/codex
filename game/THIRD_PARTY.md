@@ -147,3 +147,18 @@ Update this file whenever a new third-party dependency or asset is added, replac
 - Attribution Required: No
 - Attribution Text:
 - Notes: Bundled to provide the mobile left joystick with better multi-touch behavior and tracking quality.
+
+### Mech Robot "KW-II"
+- Type: 3D Model
+- Source: https://sketchfab.com/3d-models/mech-robot-kw-ii-3e7c3f1584724587b976332ccaf4edb3
+- License: CC BY 4.0
+- License URL: https://creativecommons.org/licenses/by/4.0/
+- Creator / Publisher: swds321 / Sketchfab
+- Version: Downloaded GLB
+- Local Path: assets/models/player/mech_robot_kw_ii
+- Modified: No
+- Commercial Use Allowed: Yes
+- Redistribution Allowed: Yes, with attribution and license compliance
+- Attribution Required: Yes
+- Attribution Text: "Mech Robot ""KW-II""" (https://skfb.ly/oHVOp) by swds321 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+- Notes: Manually provided user-selected player model. Integrated as the current player mech visual.
