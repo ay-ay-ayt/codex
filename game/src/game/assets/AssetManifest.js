@@ -33,7 +33,6 @@ export const assetManifest = Object.freeze({
       hdri: resolveProjectPath("../../../assets/sky/mud_road_puresky/mud_road_puresky_2k.hdr"),
     },
   },
-  audioCandidatesDoc: resolveProjectPath("../../../docs/audio-candidates.md"),
 });
 
 export default assetManifest;
