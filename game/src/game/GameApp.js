@@ -66,7 +66,7 @@ export class GameApp {
   }
 
   async initialize() {
-    this.setBootMessage("荒野戦場を展開しています...");
+    this.setBootMessage("Loading wasteland arena...");
     this.addSceneLighting();
 
     this.world = new WastelandArena({
@@ -76,12 +76,13 @@ export class GameApp {
     });
     await this.world.initialize();
 
-    this.setBootMessage("プレイヤーフレームを展開しています...");
+    this.setBootMessage("Loading player frame...");
     this.player = new PlayerActor();
+    await this.player.initialize();
     this.player.addToScene(this.scene);
     this.player.setSpawnPosition(this.world.getPlayerSpawnPosition(new THREE.Vector3()));
 
-    this.setBootMessage("大型ボスを配置しています...");
+    this.setBootMessage("Deploying boss target...");
     this.boss = new BossActor();
     this.boss.addToScene(this.scene);
     this.boss.setSpawnPosition(this.world.getBossSpawnPosition(new THREE.Vector3()));

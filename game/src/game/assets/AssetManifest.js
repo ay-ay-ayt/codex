@@ -22,6 +22,9 @@ export const assetManifest = Object.freeze({
     rockFace02: {
       scene: resolveProjectPath("../../../assets/models/environment/rocks/rock_face_02/rock_face_02_2k.gltf"),
     },
+    playerKwIi: {
+      scene: resolveProjectPath("../../../assets/models/player/mech_robot_kw_ii/mech_robot_kw_ii.glb"),
+    },
   },
   skies: {
     wastelandClouds: {
@@ -33,6 +36,7 @@ export const assetManifest = Object.freeze({
       hdri: resolveProjectPath("../../../assets/sky/mud_road_puresky/mud_road_puresky_2k.hdr"),
     },
   },
+  audioCandidatesDoc: resolveProjectPath("../../../docs/audio-candidates.md"),
 });
 
 export default assetManifest;
