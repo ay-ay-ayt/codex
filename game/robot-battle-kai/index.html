@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <title>3Dロボット空中ボス戦</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/build/three.module.js",
+          "three/addons/": "./vendor/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <canvas id="runtime-canvas" aria-label="3Dロボット空中ボス戦"></canvas>
+      <div id="hud-root"></div>
+      <div id="mobile-controls-root"></div>
+      <div id="boot-overlay" class="boot-overlay">
+        <section class="boot-panel">
+          <p class="boot-eyebrow">LOCK-ON AIR COMBAT</p>
+          <h1>荒野ボス戦 縦切り</h1>
+          <p class="boot-copy">
+            Ground / Hover / Fall / Jet を核にした、ロックオン前提の3Dロボット空中戦の最初のプレイ基盤です。
+          </p>
+          <p class="boot-status" data-boot-message>起動準備中...</p>
+          <div class="boot-meta">
+            <div>
+              <span>PC</span>
+              <strong>WASD / Space / Ctrl / Shift / E / Q / Mouse</strong>
+            </div>
+            <div>
+              <span>Mobile</span>
+              <strong>左スティック / 右上下 / 右ボタン群</strong>
+            </div>
+            <div>
+              <span>Core</span>
+              <strong>Lock-on, Shared Energy, Wasteland Boss Battle</strong>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script type="module">
+      const params = new URLSearchParams(window.location.search);
+      const version = params.get("v");
+      const entry = version
+        ? `./src/main.js?v=${encodeURIComponent(version)}`
+        : "./src/main.js";
+      const bootOverlay = document.querySelector("#boot-overlay");
+      const bootMessage = document.querySelector("[data-boot-message]");
+
+      import(entry).catch((error) => {
+        const message = `Module import failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.error(error);
+
+        if (bootMessage) {
+          bootMessage.textContent = message;
+        }
+
+        bootOverlay?.classList.remove("boot-overlay--hidden");
+        document.title = `Import Error | ${message}`;
+      });
+    </script>
+  </body>
+</html>
