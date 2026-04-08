@@ -103,6 +103,36 @@ Update this file whenever a new third-party dependency or asset is added, replac
 - Attribution Text:
 - Notes: Downloaded files include the 2K glTF scene and referenced textures/bin payloads.
 
+### Namaqualand Cliff 01
+- Type: 3D Model
+- Source: https://polyhaven.com/a/namaqualand_cliff_01
+- License: CC0 1.0
+- License URL: https://polyhaven.com/license
+- Creator / Publisher: Poly Haven
+- Version: 1K glTF
+- Local Path: assets/models/environment/cliffs/namaqualand_cliff_01
+- Modified: No
+- Commercial Use Allowed: Yes
+- Redistribution Allowed: Yes
+- Attribution Required: No
+- Attribution Text:
+- Notes: Downloaded files include the 1K glTF scene, shared BIN payload, and referenced Diffuse / Normal GL / ARM JPG textures.
+
+### Namaqualand Cliff 02
+- Type: 3D Model
+- Source: https://polyhaven.com/a/namaqualand_cliff_02
+- License: CC0 1.0
+- License URL: https://polyhaven.com/license
+- Creator / Publisher: Poly Haven
+- Version: 1K glTF
+- Local Path: assets/models/environment/cliffs/namaqualand_cliff_02
+- Modified: No
+- Commercial Use Allowed: Yes
+- Redistribution Allowed: Yes
+- Attribution Required: No
+- Attribution Text:
+- Notes: Downloaded files include the 1K glTF scene, shared BIN payload, and referenced Diffuse / Normal GL / ARM JPG textures.
+
 ### Wasteland Clouds
 - Type: HDRI / Sky
 - Source: https://polyhaven.com/a/wasteland_clouds

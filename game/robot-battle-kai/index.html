@@ -49,6 +49,26 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js"></script>
+    <script type="module">
+      const params = new URLSearchParams(window.location.search);
+      const version = params.get("v");
+      const entry = version
+        ? `./src/main.js?v=${encodeURIComponent(version)}`
+        : "./src/main.js";
+      const bootOverlay = document.querySelector("#boot-overlay");
+      const bootMessage = document.querySelector("[data-boot-message]");
+
+      import(entry).catch((error) => {
+        const message = `Module import failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.error(error);
+
+        if (bootMessage) {
+          bootMessage.textContent = message;
+        }
+
+        bootOverlay?.classList.remove("boot-overlay--hidden");
+        document.title = `Import Error | ${message}`;
+      });
+    </script>
   </body>
 </html>

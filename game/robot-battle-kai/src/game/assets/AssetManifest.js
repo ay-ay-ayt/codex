@@ -22,6 +22,12 @@ export const assetManifest = Object.freeze({
     rockFace02: {
       scene: resolveProjectPath("../../../assets/models/environment/rocks/rock_face_02/rock_face_02_2k.gltf"),
     },
+    cliffNamaqualand01: {
+      scene: resolveProjectPath("../../../assets/models/environment/cliffs/namaqualand_cliff_01/namaqualand_cliff_01_1k.gltf"),
+    },
+    cliffNamaqualand02: {
+      scene: resolveProjectPath("../../../assets/models/environment/cliffs/namaqualand_cliff_02/namaqualand_cliff_02_1k.gltf"),
+    },
     playerKwIi: {
       scene: resolveProjectPath("../../../assets/models/player/mech_robot_kw_ii/mech_robot_kw_ii.glb"),
     },

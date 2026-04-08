@@ -1,7 +1,7 @@
 import { MobileControlsOverlay } from "./MobileControlsOverlay.js";
 
 export class InputCoordinator {
-  constructor({ canvas, root }) {
+  constructor({ canvas, root, forceTouchControls = false }) {
     this.canvas = canvas;
     this.root = root;
     this.keys = new Set();
@@ -10,8 +10,11 @@ export class InputCoordinator {
     this.lookDeltaY = 0;
     this.hoverToggleQueued = 0;
     this.lockToggleQueued = 0;
+    this.jetQueued = 0;
     this.mouseDragging = false;
     this.isLockedOn = true;
+    this.verificationButtonProbe = null;
+    this.verificationButtonConsumed = false;
 
     this.boundKeyDown = this.onKeyDown.bind(this);
     this.boundKeyUp = this.onKeyUp.bind(this);
@@ -28,12 +31,23 @@ export class InputCoordinator {
     window.addEventListener("pointercancel", this.boundPointerUp);
     this.canvas.addEventListener("contextmenu", this.boundContextMenu);
 
-    this.mobileOverlay = new MobileControlsOverlay(root);
+    this.mobileOverlay = new MobileControlsOverlay(root, {
+      forceVisible: forceTouchControls,
+    });
   }
 
   setLockState(isLocked) {
     this.isLockedOn = isLocked;
     this.mobileOverlay.setLockState(isLocked);
+  }
+
+  setVerificationButtonProbe(action) {
+    const allowed = new Set(["shoot", "jet", "hover", "lock"]);
+    const normalized = typeof action === "string" ? action.trim().toLowerCase() : "";
+
+    this.verificationButtonProbe = allowed.has(normalized) ? normalized : null;
+    this.verificationButtonConsumed = false;
+    this.mobileOverlay.setVerificationButtonProbe(this.verificationButtonProbe);
   }
 
   onKeyDown(event) {
@@ -50,6 +64,10 @@ export class InputCoordinator {
 
     if (event.code === "KeyQ") {
       this.lockToggleQueued += 1;
+    }
+
+    if (event.code === "ShiftLeft" || event.code === "ShiftRight") {
+      this.jetQueued += 1;
     }
   }
 
@@ -101,12 +119,41 @@ export class InputCoordinator {
     const clampedMoveX = Math.max(-1, Math.min(1, moveX));
     const clampedMoveY = Math.max(-1, Math.min(1, moveY));
 
+    if (this.verificationButtonProbe) {
+      switch (this.verificationButtonProbe) {
+        case "shoot":
+          mobile.shootHeld = true;
+          break;
+        case "jet":
+          if (!this.verificationButtonConsumed) {
+            mobile.jetPressed = true;
+          }
+          break;
+        case "hover":
+          if (!this.verificationButtonConsumed) {
+            mobile.hoverTogglePressed = true;
+          }
+          break;
+        case "lock":
+          if (!this.verificationButtonConsumed) {
+            mobile.lockTogglePressed = true;
+          }
+          break;
+        default:
+          break;
+      }
+
+      if (this.verificationButtonProbe !== "shoot") {
+        this.verificationButtonConsumed = true;
+      }
+    }
+
     const frame = {
       moveX: clampedMoveX,
       moveY: clampedMoveY,
       vertical: Math.max(-1, Math.min(1, ascend - descend)),
       shootHeld: this.pointerButtons.has(0) || mobile.shootHeld,
-      jetHeld: this.keys.has("ShiftLeft") || this.keys.has("ShiftRight") || mobile.jetHeld,
+      jetPressed: this.jetQueued > 0 || mobile.jetPressed,
       hoverTogglePressed: this.hoverToggleQueued > 0 || mobile.hoverTogglePressed,
       lockTogglePressed: this.lockToggleQueued > 0 || mobile.lockTogglePressed,
       lookX: this.lookDeltaX + mobile.lookX,
@@ -116,10 +163,25 @@ export class InputCoordinator {
 
     this.hoverToggleQueued = 0;
     this.lockToggleQueued = 0;
+    this.jetQueued = 0;
     this.lookDeltaX = 0;
     this.lookDeltaY = 0;
 
     return frame;
+  }
+
+  reset() {
+    this.keys.clear();
+    this.pointerButtons.clear();
+    this.lookDeltaX = 0;
+    this.lookDeltaY = 0;
+    this.hoverToggleQueued = 0;
+    this.lockToggleQueued = 0;
+    this.jetQueued = 0;
+    this.mouseDragging = false;
+    this.verificationButtonConsumed = false;
+    this.mobileOverlay.reset();
+    this.mobileOverlay.setVerificationButtonProbe(this.verificationButtonProbe);
   }
 
   dispose() {

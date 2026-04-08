@@ -26,7 +26,7 @@ For full license tracking and internal dependency records, see `THIRD_PARTY.md`.
 - Selected wasteland environment assets by Poly Haven
   - Source: https://polyhaven.com/
   - License: CC0 1.0
-  - Attribution: Not required, included here for transparency. Assets used: Rocky Gravel, Rocks Ground 05, Rock 09, Rock Face 02, Wasteland Clouds, Mud Road (Pure Sky).
+  - Attribution: Not required, included here for transparency. Assets used: Rocky Gravel, Rocks Ground 05, Rock 09, Rock Face 02, Namaqualand Cliff 01, Namaqualand Cliff 02, Wasteland Clouds, Mud Road (Pure Sky).
 
 - nipplejs (1.0.1) by Yoann Moinet and contributors
   - Source: https://www.npmjs.com/package/nipplejs

@@ -182,6 +182,26 @@ export class BossActor {
     return this.hp > 0;
   }
 
+  clearShockwaves() {
+    for (const wave of this.shockwaves.splice(0)) {
+      this.group.remove(wave.mesh);
+      wave.mesh.material.dispose();
+    }
+  }
+
+  resetForBattle(spawnPosition) {
+    this.clearShockwaves();
+    this.setSpawnPosition(spawnPosition);
+    this.hp = this.maxHp;
+    this.damageFlash = 0;
+    this.cycleTimer = this.config.cycleSeconds;
+    this.telegraphActive = false;
+    this.group.rotation.y = 0;
+    this.telegraphRing.material.opacity = 0;
+    this.telegraphRing.scale.setScalar(1);
+    this.coreMaterial.emissiveIntensity = 1.8;
+  }
+
   getAimPoint(target = new THREE.Vector3()) {
     return this.coreNode.getWorldPosition(target);
   }

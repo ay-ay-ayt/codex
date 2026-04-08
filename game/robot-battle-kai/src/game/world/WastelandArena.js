@@ -43,42 +43,36 @@ export class WastelandArena {
   }
 
   async initialize() {
-    const [terrainTextures, rock09, rockFace02, skyTexture] = await Promise.all([
+    const [terrainTextures, rock09, rockFace02, cliff01, cliff02, skyTexture] = await Promise.all([
       this.loadTerrainTextures(),
       this.loaderGltf.loadAsync(assetManifest.models.rock09.scene),
       this.loaderGltf.loadAsync(assetManifest.models.rockFace02.scene),
+      this.loaderGltf.loadAsync(assetManifest.models.cliffNamaqualand01.scene),
+      this.loaderGltf.loadAsync(assetManifest.models.cliffNamaqualand02.scene),
       this.loaderHdr.loadAsync(assetManifest.skies.wastelandClouds.hdri),
     ]);
 
     this.terrainTextures = terrainTextures;
     this.rockTemplates.set("rock09", rock09.scene);
     this.rockTemplates.set("rockFace02", rockFace02.scene);
+    this.rockTemplates.set("cliffNamaqualand01", cliff01.scene);
+    this.rockTemplates.set("cliffNamaqualand02", cliff02.scene);
 
     this.applySky(skyTexture);
     this.buildTerrain();
     this.buildRockField();
     this.buildDustBands();
+    this.buildHorizonSilhouettes();
   }
 
   async loadTerrainTextures() {
-    const [rockyDiffuse, rockyNormal, rockyArm, groundDiffuse, groundNormal, groundArm] =
-      await Promise.all([
-        this.loaderTexture.loadAsync(assetManifest.textures.rockyGravel.diffuse),
-        this.loaderTexture.loadAsync(assetManifest.textures.rockyGravel.normal),
-        this.loaderTexture.loadAsync(assetManifest.textures.rockyGravel.arm),
-        this.loaderTexture.loadAsync(assetManifest.textures.rocksGround05.diffuse),
-        this.loaderTexture.loadAsync(assetManifest.textures.rocksGround05.normal),
-        this.loaderTexture.loadAsync(assetManifest.textures.rocksGround05.arm),
-      ]);
+    const [rockyDiffuse, rockyNormal, rockyArm] = await Promise.all([
+      this.loaderTexture.loadAsync(assetManifest.textures.rockyGravel.diffuse),
+      this.loaderTexture.loadAsync(assetManifest.textures.rockyGravel.normal),
+      this.loaderTexture.loadAsync(assetManifest.textures.rockyGravel.arm),
+    ]);
 
-    for (const texture of [
-      rockyDiffuse,
-      rockyNormal,
-      rockyArm,
-      groundDiffuse,
-      groundNormal,
-      groundArm,
-    ]) {
+    for (const texture of [rockyDiffuse, rockyNormal, rockyArm]) {
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
       texture.anisotropy = Math.min(this.renderer.capabilities.getMaxAnisotropy(), 8);
@@ -86,15 +80,11 @@ export class WastelandArena {
     }
 
     rockyDiffuse.colorSpace = THREE.SRGBColorSpace;
-    groundDiffuse.colorSpace = THREE.SRGBColorSpace;
 
     return {
       rockyDiffuse,
       rockyNormal,
       rockyArm,
-      groundDiffuse,
-      groundNormal,
-      groundArm,
     };
   }
 
@@ -105,7 +95,7 @@ export class WastelandArena {
 
     this.scene.background = hdrTexture;
     this.scene.environment = environmentMap;
-    this.scene.fog = new THREE.FogExp2("#c48c53", 0.006);
+    this.scene.fog = new THREE.FogExp2("#b77a47", 0.0049);
 
     pmremGenerator.dispose();
   }
@@ -132,16 +122,16 @@ export class WastelandArena {
     geometry.computeVertexNormals();
 
     const material = new THREE.MeshStandardMaterial({
-      color: "#bd8d5d",
-      map: this.terrainTextures.groundDiffuse,
-      normalMap: this.terrainTextures.groundNormal,
-      roughnessMap: this.terrainTextures.groundArm,
-      metalnessMap: this.terrainTextures.groundArm,
-      aoMap: this.terrainTextures.groundArm,
+      color: "#bb8555",
+      map: this.terrainTextures.rockyDiffuse,
+      normalMap: this.terrainTextures.rockyNormal,
+      roughnessMap: this.terrainTextures.rockyArm,
+      metalnessMap: this.terrainTextures.rockyArm,
+      aoMap: this.terrainTextures.rockyArm,
       roughness: 1,
-      metalness: 0.18,
-      normalScale: new THREE.Vector2(1.1, 1.1),
-      envMapIntensity: 0.45,
+      metalness: 0.14,
+      normalScale: new THREE.Vector2(1.2, 1.2),
+      envMapIntensity: 0.42,
     });
 
     this.terrainMaterial = material;
@@ -163,18 +153,28 @@ export class WastelandArena {
   }
 
   buildRockField() {
+    const outerScale = 1.55;
     const placements = [
       ["rock09", -48, -18, 8.5, 1.7, 0.4],
-      ["rock09", -60, 28, 7, 1.45, -0.8],
-      ["rock09", 54, -34, 6.4, 1.3, 0.1],
-      ["rock09", 62, 22, 8, 1.55, 0.5],
-      ["rockFace02", -78, 6, 13, 1.8, 0.8],
-      ["rockFace02", 80, -4, 12, 1.6, -0.6],
-      ["rockFace02", -22, 72, 11, 1.45, 0.25],
-      ["rockFace02", 24, -78, 10, 1.5, -0.35],
-      ["rock09", -96, -40, 9, 1.6, 0.1],
-      ["rock09", 96, 46, 7.4, 1.25, -0.3],
-    ];
+      ["rock09", -76, 34, 8.2, 1.55, -0.8],
+      ["rock09", 68, -42, 7.2, 1.35, 0.1],
+      ["rock09", 84, 28, 8.8, 1.65, 0.5],
+      ["rockFace02", -104, 10, 16, 1.95, 0.8],
+      ["rockFace02", 112, -8, 15.5, 1.8, -0.6],
+      ["rockFace02", -34, 108, 13.5, 1.55, 0.25],
+      ["rockFace02", 30, -118, 13.5, 1.65, -0.35],
+      ["rock09", -132, -56, 10.5, 1.75, 0.1],
+      ["rock09", 136, 62, 9.2, 1.45, -0.3],
+      ["rock09", -146, 92, 12.5, 1.95, 0.18],
+      ["rockFace02", 150, -94, 18, 2.1, -0.42],
+    ].map(([templateKey, x, z, targetHeight, scale, rotation]) => ([
+      templateKey,
+      x * outerScale,
+      z * outerScale,
+      targetHeight * 1.08,
+      scale,
+      rotation,
+    ]));
 
     for (const [templateKey, x, z, targetHeight, scale, rotation] of placements) {
       const template = this.rockTemplates.get(templateKey);
@@ -203,11 +203,17 @@ export class WastelandArena {
     }
 
     for (const [x, z, radius, height, color] of [
-      [-42, 58, 7.2, 3.4, "#8c6540"],
-      [42, 68, 6.8, 2.8, "#7c5638"],
-      [74, 42, 6.4, 2.4, "#916641"],
-      [-70, -62, 7.4, 3.1, "#7a5333"],
-      [18, -88, 6, 2.6, "#855d3c"],
+      [-58, 74, 8.8, 3.8, "#8c6540"],
+      [58, 88, 8.2, 3.2, "#7c5638"],
+      [106, 56, 7.8, 3.1, "#916641"],
+      [-98, -84, 8.8, 3.6, "#7a5333"],
+      [24, -124, 7.6, 3, "#855d3c"],
+      [-142, 18, 9.6, 4.2, "#7b5436"],
+      [144, -18, 10.4, 4.6, "#916746"],
+      [-176, 132, 10.8, 4.8, "#7d5838"],
+      [188, 108, 11.4, 5.2, "#916847"],
+      [-212, -94, 10.6, 4.9, "#7a5535"],
+      [204, -126, 12.1, 5.4, "#8d6440"],
     ]) {
       const mesh = new THREE.Mesh(
         new THREE.CylinderGeometry(radius * 0.7, radius, height, 7),
@@ -228,7 +234,12 @@ export class WastelandArena {
     const dustGroup = new THREE.Group();
     dustGroup.name = "DustBands";
 
-    const ringGeometry = new THREE.RingGeometry(18, 62, 64, 1);
+    const ringGeometry = new THREE.RingGeometry(
+      this.config.playRadius * 0.16,
+      this.config.playRadius * 0.5,
+      64,
+      1,
+    );
     const ringMaterial = new THREE.MeshBasicMaterial({
       color: "#e9a865",
       transparent: true,
@@ -243,7 +254,12 @@ export class WastelandArena {
     dustGroup.add(innerGlow);
 
     const farGlow = new THREE.Mesh(
-      new THREE.RingGeometry(72, this.config.playRadius + 8, 64, 1),
+      new THREE.RingGeometry(
+        this.config.playRadius * 0.58,
+        this.config.playRadius + 30,
+        64,
+        1,
+      ),
       new THREE.MeshBasicMaterial({
         color: "#d38b46",
         transparent: true,
@@ -259,11 +275,130 @@ export class WastelandArena {
     this.group.add(dustGroup);
   }
 
+  addBackdropInstance(templateKey, {
+    x,
+    z,
+    targetHeight,
+    scale = 1,
+    rotation = 0,
+    yOffset = 0,
+    parent = this.group,
+  }) {
+    const template = this.rockTemplates.get(templateKey);
+
+    if (!template) {
+      return;
+    }
+
+    const clone = cloneScene(template);
+    const bounds = new THREE.Box3().setFromObject(clone);
+    const size = bounds.getSize(new THREE.Vector3());
+    const height = Math.max(size.y, 0.001);
+    const scaleFactor = (targetHeight / height) * scale;
+
+    clone.scale.setScalar(scaleFactor);
+    const scaledBounds = new THREE.Box3().setFromObject(clone);
+    const center = scaledBounds.getCenter(new THREE.Vector3());
+
+    clone.position.set(
+      x - center.x,
+      this.sampleHeight(x, z) - scaledBounds.min.y + yOffset,
+      z - center.z,
+    );
+    clone.rotation.y = rotation;
+    parent.add(clone);
+  }
+
+  buildHorizonSilhouettes() {
+    const silhouettes = new THREE.Group();
+    silhouettes.name = "HorizonSilhouettes";
+
+    for (const [templateKey, x, z, targetHeight, scale, rotation, yOffset] of [
+      ["cliffNamaqualand01", -246, 246, 58, 1.02, 0.18, -1.4],
+      ["cliffNamaqualand02", -302, 172, 74, 1.08, 0.06, -1.8],
+      ["cliffNamaqualand01", -314, 72, 46, 0.86, -0.1, -1.2],
+      ["cliffNamaqualand02", 284, -184, 52, 0.88, 2.34, -1.1],
+      ["cliffNamaqualand01", 222, -266, 64, 1.04, 2.56, -1.5],
+      ["cliffNamaqualand02", 102, -312, 42, 0.78, 2.9, -0.9],
+      ["cliffNamaqualand01", 314, 44, 38, 0.72, 1.64, -0.8],
+    ]) {
+      this.addBackdropInstance(templateKey, {
+        x,
+        z,
+        targetHeight,
+        scale,
+        rotation,
+        yOffset,
+        parent: silhouettes,
+      });
+    }
+
+    for (const [angle, radius, width, height, color, rotation] of [
+      [0.04, this.config.playRadius + 32, 18, 21, "#6f4d35", 0.08],
+      [0.1, this.config.playRadius + 44, 24, 28, "#765237", 0.12],
+      [0.17, this.config.playRadius + 36, 16, 18, "#6e4c34", -0.18],
+      [0.25, this.config.playRadius + 48, 20, 23, "#714d34", 0.18],
+      [0.31, this.config.playRadius + 40, 18, 20, "#7b563a", 0.3],
+      [0.38, this.config.playRadius + 50, 26, 30, "#6a4932", -0.16],
+      [0.45, this.config.playRadius + 34, 22, 26, "#6d4b32", -0.12],
+      [0.53, this.config.playRadius + 46, 20, 24, "#7a5538", 0.2],
+      [0.61, this.config.playRadius + 52, 22, 25, "#7c583d", -0.1],
+      [0.69, this.config.playRadius + 38, 18, 19, "#714d34", -0.22],
+      [0.76, this.config.playRadius + 48, 23, 27, "#6d4a33", 0.26],
+      [0.83, this.config.playRadius + 42, 24, 28, "#7c573b", 0.16],
+      [0.9, this.config.playRadius + 36, 19, 21, "#6b4931", -0.08],
+      [0.96, this.config.playRadius + 50, 22, 24, "#77543a", 0.12],
+      [1.04, this.config.playRadius + 46, 28, 30, "#69462f", 0.18],
+      [1.11, this.config.playRadius + 40, 20, 22, "#724e34", -0.14],
+      [1.19, this.config.playRadius + 52, 26, 29, "#7b573a", 0.2],
+    ]) {
+      const radians = angle * Math.PI * 2;
+      const x = Math.cos(radians) * radius;
+      const z = Math.sin(radians) * radius;
+      const baseY = this.sampleHeight(x, z);
+
+      const mesa = new THREE.Mesh(
+        new THREE.CylinderGeometry(width * 0.48, width, height, 7),
+        new THREE.MeshStandardMaterial({
+          color,
+          roughness: 1,
+          metalness: 0.02,
+        }),
+      );
+      mesa.position.set(x, baseY + height * 0.48, z);
+      mesa.rotation.y = rotation;
+      silhouettes.add(mesa);
+    }
+
+    for (const [width, height, x, z, rotation, opacity] of [
+      [110, 34, -264, 166, 0.1, 0.11],
+      [86, 28, 238, -224, 0.62, 0.08],
+      [72, 24, 86, -304, 0.18, 0.06],
+    ]) {
+      const haze = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshBasicMaterial({
+          color: "#d08d58",
+          transparent: true,
+          opacity,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        }),
+      );
+
+      haze.position.set(x, this.sampleHeight(x, z) + height * 0.5 + 8, z);
+      haze.rotation.y = rotation;
+      silhouettes.add(haze);
+    }
+
+    this.group.add(silhouettes);
+  }
+
   sampleHeight(x, z) {
     const distance = Math.sqrt(x * x + z * z);
-    const openFactor = smoothstep(18, 62, distance);
-    const outerFactor = smoothstep(56, 132, distance);
-    const basin = -1.3 * (1 - smoothstep(0, 36, distance));
+    const openFactor = smoothstep(36, 140, distance);
+    const outerFactor = smoothstep(176, this.config.playRadius, distance);
+    const basin = -1.6 * (1 - smoothstep(0, 64, distance));
     const macroWaves =
       Math.sin(x * 0.034) * 1.2 +
       Math.cos(z * 0.041) * 0.9 +
@@ -271,10 +406,10 @@ export class WastelandArena {
     const erosion =
       Math.sin((x - z) * 0.061) * 0.8 +
       Math.cos(z * 0.071 + x * 0.024) * 0.55;
-    const edgeRise = outerFactor * (4.2 + Math.sin(distance * 0.08) * 1.2);
+    const edgeRise = outerFactor * (7.2 + Math.sin(distance * 0.055) * 2);
     const plateau = THREE.MathUtils.lerp(basin, macroWaves * 0.3 + erosion * 0.18, openFactor);
 
-    return plateau + edgeRise * 0.52;
+    return plateau + edgeRise * 0.6;
   }
 
   getPlayerSpawnPosition(target = new THREE.Vector3()) {

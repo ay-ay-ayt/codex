@@ -1,6 +1,7 @@
 export class HudView {
   constructor(root) {
     this.root = root;
+    this.retryHandler = null;
     this.root.innerHTML = `
       <div class="hud-shell">
         <div class="hud-panel hud-panel--player">
@@ -54,9 +55,19 @@ export class HudView {
           <span>Q Lock</span>
           <span>RMB Look</span>
         </div>
+
+        <div class="hud-end-overlay">
+          <div class="hud-end-card">
+            <div class="hud-end-eyebrow">Battle Status</div>
+            <div class="hud-end-title">Mission Failed</div>
+            <div class="hud-end-copy">Reboot the frame and re-engage.</div>
+            <button class="hud-end-button" type="button">Retry</button>
+          </div>
+        </div>
       </div>
     `;
 
+    this.shell = this.root.querySelector(".hud-shell");
     this.hpFill = this.root.querySelector(".hud-bar__fill--hp");
     this.energyFill = this.root.querySelector(".hud-bar__fill--energy");
     this.bossFill = this.root.querySelector(".hud-bar__fill--boss");
@@ -71,6 +82,18 @@ export class HudView {
     this.toast = this.root.querySelector(".hud-toast");
     this.damageFlash = this.root.querySelector(".hud-damage-flash");
     this.help = this.root.querySelector(".hud-help");
+    this.endOverlay = this.root.querySelector(".hud-end-overlay");
+    this.endTitle = this.root.querySelector(".hud-end-title");
+    this.endCopy = this.root.querySelector(".hud-end-copy");
+    this.retryButton = this.root.querySelector(".hud-end-button");
+
+    this.retryButton?.addEventListener("click", () => {
+      this.retryHandler?.();
+    });
+  }
+
+  setRetryHandler(handler) {
+    this.retryHandler = handler;
   }
 
   update({
@@ -80,10 +103,12 @@ export class HudView {
     lockScreenPosition,
     damageFlashAmount,
     usingTouch,
+    battleState,
   }) {
     const hpRatio = Math.max(0, player.hp / player.config.hp);
     const energyRatio = player.energy.ratio;
     const bossRatio = Math.max(0, boss.hp / boss.maxHp);
+    const battleEnded = battleState !== "running";
 
     this.hpFill.style.transform = `scaleX(${hpRatio})`;
     this.energyFill.style.transform = `scaleX(${energyRatio})`;
@@ -99,7 +124,7 @@ export class HudView {
     this.bossPanel.classList.toggle("hud-panel--hidden", !isLocked && boss.hp <= 0);
     this.bossPanel.classList.toggle("hud-panel--faded", !isLocked);
 
-    const showReticle = isLocked && lockScreenPosition;
+    const showReticle = battleState === "running" && isLocked && lockScreenPosition;
     this.reticle.classList.toggle("hud-reticle--visible", Boolean(showReticle));
     this.lockIndicator.classList.toggle("hud-lock-indicator--visible", Boolean(showReticle));
 
@@ -111,19 +136,32 @@ export class HudView {
     }
 
     this.toast.textContent =
-      boss.hp <= 0
-        ? "Boss down"
-        : player.state === "Jet"
-          ? "Jet reduces damage instead of granting invulnerability."
-          : isLocked
-            ? "Lock-on camera is active."
-            : "Right drag for free-look.";
+      battleState === "cleared"
+        ? "Boss neutralized."
+        : battleState === "failed"
+          ? "Frame integrity lost."
+          : player.state === "Jet"
+            ? "Jet reduces damage instead of granting invulnerability."
+            : isLocked
+              ? "Lock-on camera is active."
+              : "Right drag for free-look.";
 
     this.damageFlash.style.opacity = `${Math.max(0, damageFlashAmount)}`;
     this.help.classList.toggle("hud-help--touch", usingTouch);
     this.help.textContent = usingTouch
       ? "Left stick move / right lane ascend-descend / right buttons shoot jet hover lock"
       : "WASD move / Space Ctrl / Shift / E / Q / LMB shoot / RMB look";
+
+    this.shell.classList.toggle("hud-shell--battle-ended", battleEnded);
+    this.endOverlay.classList.toggle("hud-end-overlay--visible", battleEnded);
+
+    if (battleState === "cleared") {
+      this.endTitle.textContent = "Boss Destroyed";
+      this.endCopy.textContent = "Arena secure. Launch again whenever you're ready.";
+    } else if (battleState === "failed") {
+      this.endTitle.textContent = "Mission Failed";
+      this.endCopy.textContent = "Reboot the frame and dive straight back into the fight.";
+    }
   }
 }
 
