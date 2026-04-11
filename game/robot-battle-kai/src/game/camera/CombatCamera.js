@@ -24,9 +24,11 @@ export class CombatCamera {
     this.currentForward = new THREE.Vector3(0, 0, -1);
     this.planarForward = new THREE.Vector3(0, 0, -1);
     this.planarRight = new THREE.Vector3(1, 0, 0);
+    this.movementPlanarForward = new THREE.Vector3(0, 0, -1);
+    this.movementPlanarRight = new THREE.Vector3(1, 0, 0);
 
     this.lookYaw = Math.PI;
-    this.lookPitch = 0.22;
+    this.lookPitch = 0;
     this.freeLookTimer = 0;
     this.lockSide = 1;
     this.baseFov = camera.fov;
@@ -44,20 +46,34 @@ export class CombatCamera {
     this.tmpPlanarOffset = new THREE.Vector3();
     this.tmpAimPoint = new THREE.Vector3();
     this.tmpCameraDirection = new THREE.Vector3();
+    this.tmpScreenA = new THREE.Vector3();
+    this.tmpScreenB = new THREE.Vector3();
+    this.ndcProbeCamera = new THREE.PerspectiveCamera(
+      camera.fov,
+      camera.aspect,
+      camera.near,
+      camera.far,
+    );
   }
 
   getPlanarBasis() {
-    if (!isFiniteVector(this.planarForward) || this.planarForward.lengthSq() < 0.0001) {
-      this.planarForward.set(0, 0, -1);
+    if (
+      !isFiniteVector(this.movementPlanarForward) ||
+      this.movementPlanarForward.lengthSq() < 0.0001
+    ) {
+      this.movementPlanarForward.set(0, 0, -1);
     }
 
-    if (!isFiniteVector(this.planarRight) || this.planarRight.lengthSq() < 0.0001) {
-      this.planarRight.set(1, 0, 0);
+    if (
+      !isFiniteVector(this.movementPlanarRight) ||
+      this.movementPlanarRight.lengthSq() < 0.0001
+    ) {
+      this.movementPlanarRight.set(1, 0, 0);
     }
 
     return {
-      forward: this.planarForward,
-      right: this.planarRight,
+      forward: this.movementPlanarForward,
+      right: this.movementPlanarRight,
     };
   }
 
@@ -75,6 +91,7 @@ export class CombatCamera {
     }
 
     const aimDirection = this.camera.getWorldDirection(this.tmpCameraDirection);
+    const planarAim = this.tmpMixed.copy(this.movementPlanarForward);
 
     if (!isFiniteVector(aimDirection) || aimDirection.lengthSq() < 0.0001) {
       aimDirection.copy(this.currentForward);
@@ -85,6 +102,22 @@ export class CombatCamera {
     } else {
       aimDirection.normalize();
     }
+
+    if (!isFiniteVector(planarAim) || planarAim.lengthSq() < 0.0001) {
+      planarAim.copy(this.currentForward).setY(0);
+    }
+
+    if (!isFiniteVector(planarAim) || planarAim.lengthSq() < 0.0001) {
+      planarAim.set(0, 0, -1);
+    } else {
+      planarAim.normalize();
+    }
+
+    const downwardBias = THREE.MathUtils.clamp((-aimDirection.y - 0.01) / 0.22, 0, 1);
+    const planarBlend = 0.18 + downwardBias * 0.7;
+    aimDirection.lerp(planarAim, planarBlend);
+    aimDirection.y = Math.max(aimDirection.y, -0.015);
+    aimDirection.normalize();
 
     return target
       .copy(this.camera.position)
@@ -112,6 +145,109 @@ export class CombatCamera {
       .addScaledVector(framingForward, -distance)
       .addScaledVector(this.tmpUp, height)
       .addScaledVector(lateralDirection, shoulderOffset);
+  }
+
+  setMovementBasisFromForward(sourceForward) {
+    this.movementPlanarForward.copy(sourceForward).setY(0);
+
+    if (
+      !isFiniteVector(this.movementPlanarForward) ||
+      this.movementPlanarForward.lengthSq() < 0.0001
+    ) {
+      this.movementPlanarForward.copy(this.planarForward);
+    }
+
+    if (
+      !isFiniteVector(this.movementPlanarForward) ||
+      this.movementPlanarForward.lengthSq() < 0.0001
+    ) {
+      this.movementPlanarForward.set(0, 0, -1);
+    } else {
+      this.movementPlanarForward.normalize();
+    }
+
+    this.movementPlanarRight
+      .crossVectors(this.movementPlanarForward, this.tmpUp)
+      .normalize();
+
+    if (
+      !isFiniteVector(this.movementPlanarRight) ||
+      this.movementPlanarRight.lengthSq() < 0.0001
+    ) {
+      this.movementPlanarRight.set(1, 0, 0);
+    }
+  }
+
+  projectPointToFrameNdc(point, position, lookTarget, target = new THREE.Vector3()) {
+    this.ndcProbeCamera.fov = this.camera.fov;
+    this.ndcProbeCamera.aspect = this.camera.aspect;
+    this.ndcProbeCamera.near = this.camera.near;
+    this.ndcProbeCamera.far = this.camera.far;
+    this.ndcProbeCamera.updateProjectionMatrix();
+    this.ndcProbeCamera.position.copy(position);
+    this.ndcProbeCamera.up.copy(this.tmpUp);
+    this.ndcProbeCamera.lookAt(lookTarget);
+    this.ndcProbeCamera.updateMatrixWorld(true);
+    return target.copy(point).project(this.ndcProbeCamera);
+  }
+
+  getLockedOverlapAvoidanceStrength(
+    playerAnchor,
+    targetPoint,
+    position,
+    lookTarget,
+    airborneFactor,
+  ) {
+    if (airborneFactor < 0.45) {
+      return 0;
+    }
+
+    const playerScreen = this.projectPointToFrameNdc(
+      playerAnchor,
+      position,
+      lookTarget,
+      this.tmpScreenA,
+    );
+    const targetScreen = this.projectPointToFrameNdc(
+      targetPoint,
+      position,
+      lookTarget,
+      this.tmpScreenB,
+    );
+
+    if (!isFiniteVector(playerScreen) || !isFiniteVector(targetScreen)) {
+      return 0;
+    }
+
+    const verticalSeparation = Math.abs(targetScreen.y - playerScreen.y);
+    const screenDistance = Math.hypot(
+      targetScreen.x - playerScreen.x,
+      targetScreen.y - playerScreen.y,
+    );
+
+    if (
+      verticalSeparation >= this.config.lockOverlapMinVerticalNdc &&
+      screenDistance >= this.config.lockOverlapMinScreenDistance
+    ) {
+      return 0;
+    }
+
+    const verticalOverlap = 1 - THREE.MathUtils.clamp(
+      verticalSeparation / this.config.lockOverlapMinVerticalNdc,
+      0,
+      1,
+    );
+    const screenOverlap = 1 - THREE.MathUtils.clamp(
+      screenDistance / this.config.lockOverlapMinScreenDistance,
+      0,
+      1,
+    );
+    const airborneWeight = THREE.MathUtils.clamp((airborneFactor - 0.45) / 0.55, 0, 1);
+    return THREE.MathUtils.clamp(
+      Math.max(verticalOverlap, screenOverlap) * airborneWeight,
+      0,
+      1,
+    );
   }
 
   setInitialLockSide(player, lockTarget) {
@@ -244,7 +380,9 @@ export class CombatCamera {
     const playerForward = player.getForwardVector(this.tmpForward);
     const desiredYaw = Math.atan2(playerForward.x, playerForward.z);
 
-    if (this.freeLookTimer <= 0) {
+    const allowAutoFollow = input.moveY >= -0.15;
+
+    if (this.freeLookTimer <= 0 && allowAutoFollow) {
       this.lookYaw = dampAngle(this.lookYaw, desiredYaw, this.config.followTurnSpeed, deltaSeconds);
     }
 
@@ -255,6 +393,7 @@ export class CombatCamera {
       Math.cos(this.lookYaw) * cosPitch,
     ).normalize();
     const right = this.tmpRight.crossVectors(forward, this.tmpUp).normalize();
+    this.setMovementBasisFromForward(forward);
     const desiredDistance =
       this.config.sharedDistance +
       airborneFactor * 1.1 +
@@ -301,6 +440,7 @@ export class CombatCamera {
     const distance = Math.max(0.001, toBoss.length());
     const verticalDelta = Math.abs(toBoss.y);
     const relativeAltitude = THREE.MathUtils.clamp((playerAnchor.y - targetPoint.y) / 18, -1, 1);
+    const positiveAltitude = Math.max(0, relativeAltitude);
 
     toBoss.normalize();
 
@@ -316,46 +456,91 @@ export class CombatCamera {
       .multiplyScalar(0.72)
       .addScaledVector(playerForward, 0.28)
       .normalize();
+    this.setMovementBasisFromForward(framingForward);
 
     const desiredDistance = THREE.MathUtils.clamp(
       this.config.sharedDistance +
         0.24 +
         distance * 0.018 +
         verticalDelta * 0.06 +
-        airborneFactor * 0.38,
+        airborneFactor * 0.54 +
+        positiveAltitude * 1.15,
       this.config.sharedDistance + 0.1,
-      this.config.sharedDistance + 2.2,
+      this.config.sharedDistance + 4,
     );
-    const desiredHeight =
+    const desiredHeight = Math.max(
+      this.config.sharedHeight - 0.15,
       this.config.sharedHeight +
-      0.18 +
-      verticalDelta * 0.05 +
-      airborneFactor * 0.16 +
-      Math.max(0, relativeAltitude) * 0.06;
+        0.12 +
+        verticalDelta * 0.035 +
+        airborneFactor * 0.02 -
+        positiveAltitude * 0.65,
+    );
     const shoulderOffset =
-      this.config.sharedShoulderOffset + 0.08;
+      this.config.sharedShoulderOffset +
+      0.08 +
+      positiveAltitude * 0.24;
     const targetBias = THREE.MathUtils.clamp(
-      0.34 - airborneFactor * 0.03 - Math.max(0, relativeAltitude) * 0.03,
-      0.31,
-      0.36,
+      0.34 + airborneFactor * 0.02 + positiveAltitude * 0.04,
+      0.34,
+      0.4,
     );
     const lookLift =
       this.config.sharedLookLift +
       0.08 +
-      airborneFactor * 0.06 +
-      Math.max(0, relativeAltitude) * 0.04;
+      airborneFactor * 0.02;
 
-    this.tmpCenter.lerpVectors(playerAnchor, targetPoint, targetBias);
+    let adjustedDistance = desiredDistance;
+    let adjustedHeight = desiredHeight;
+    let adjustedTargetBias = targetBias;
+    let adjustedShoulderOffset = this.lockSide * shoulderOffset;
+
+    this.tmpCenter.lerpVectors(playerAnchor, targetPoint, adjustedTargetBias);
     const lookTarget = this.tmpLook.copy(this.tmpCenter).addScaledVector(this.tmpUp, lookLift);
     this.composeCombatFrame({
       playerAnchor,
       framingForward,
       lateralDirection: lateral,
       lookTarget,
-      distance: desiredDistance,
-      height: desiredHeight,
-      shoulderOffset: this.lockSide * shoulderOffset,
+      distance: adjustedDistance,
+      height: adjustedHeight,
+      shoulderOffset: adjustedShoulderOffset,
     });
+
+    const overlapAvoidance = this.getLockedOverlapAvoidanceStrength(
+      playerAnchor,
+      targetPoint,
+      this.tmpPosition,
+      lookTarget,
+      airborneFactor,
+    );
+
+    if (overlapAvoidance > 0.001) {
+      adjustedDistance += this.config.lockOverlapDistanceBoost * overlapAvoidance;
+      adjustedHeight = Math.max(
+        this.config.sharedHeight,
+        adjustedHeight - this.config.lockOverlapHeightReduction * overlapAvoidance,
+      );
+      adjustedTargetBias = THREE.MathUtils.lerp(
+        adjustedTargetBias,
+        this.config.lockOverlapTargetBiasMax,
+        overlapAvoidance,
+      );
+      adjustedShoulderOffset = this.lockSide * (
+        shoulderOffset + this.config.lockOverlapShoulderBoost * overlapAvoidance
+      );
+      this.tmpCenter.lerpVectors(playerAnchor, targetPoint, adjustedTargetBias);
+      lookTarget.copy(this.tmpCenter).addScaledVector(this.tmpUp, lookLift);
+      this.composeCombatFrame({
+        playerAnchor,
+        framingForward,
+        lateralDirection: lateral,
+        lookTarget,
+        distance: adjustedDistance,
+        height: adjustedHeight,
+        shoulderOffset: adjustedShoulderOffset,
+      });
+    }
 
     this.clampElevationAngle(
       this.tmpCenter,

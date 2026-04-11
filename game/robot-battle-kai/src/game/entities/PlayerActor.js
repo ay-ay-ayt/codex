@@ -39,6 +39,9 @@ function isFiniteEuler(euler) {
   );
 }
 
+const lowerBodyFacingDeformBonePattern =
+  /^DEF-(?:LEG|SHIN|KNEE|FOOT-ALONG-[XY]|TOE-(?:FRONT|BACK|IN|OUT|PLATE-FRONT)|SHIN-PISTON-(?:IN|OUT)|ANKLE-PISTON-(?:IN|OUT))\.[LR](?:_|$)/i;
+
 function createAdditiveMaterial({ color, opacity }) {
   return new THREE.MeshBasicMaterial({
     color,
@@ -99,10 +102,11 @@ function createFlameTexture() {
 
   const outerGradient = context.createLinearGradient(0, height, 0, 0);
   outerGradient.addColorStop(0, "rgba(255, 255, 255, 0)");
-  outerGradient.addColorStop(0.08, "rgba(214, 237, 255, 0.18)");
-  outerGradient.addColorStop(0.28, "rgba(229, 244, 255, 0.38)");
-  outerGradient.addColorStop(0.58, "rgba(244, 250, 255, 0.28)");
-  outerGradient.addColorStop(0.9, "rgba(255, 255, 255, 0.04)");
+  outerGradient.addColorStop(0.06, "rgba(255, 236, 214, 0.12)");
+  outerGradient.addColorStop(0.16, "rgba(210, 235, 255, 0.24)");
+  outerGradient.addColorStop(0.34, "rgba(224, 243, 255, 0.44)");
+  outerGradient.addColorStop(0.62, "rgba(244, 250, 255, 0.32)");
+  outerGradient.addColorStop(0.88, "rgba(255, 255, 255, 0.08)");
   outerGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
   context.fillStyle = outerGradient;
 
@@ -129,10 +133,10 @@ function createFlameTexture() {
   context.fill();
 
   const lobeSpecs = [
-    { y: 0.86, radiusX: 0.11, radiusY: 0.09, alpha: 0.36 },
-    { y: 0.7, radiusX: 0.09, radiusY: 0.12, alpha: 0.42 },
-    { y: 0.52, radiusX: 0.08, radiusY: 0.14, alpha: 0.34 },
-    { y: 0.3, radiusX: 0.06, radiusY: 0.12, alpha: 0.18 },
+    { y: 0.87, radiusX: 0.12, radiusY: 0.095, alpha: 0.42 },
+    { y: 0.72, radiusX: 0.1, radiusY: 0.125, alpha: 0.48 },
+    { y: 0.54, radiusX: 0.085, radiusY: 0.145, alpha: 0.38 },
+    { y: 0.34, radiusX: 0.065, radiusY: 0.125, alpha: 0.24 },
   ];
 
   for (const lobe of lobeSpecs) {
@@ -162,10 +166,10 @@ function createFlameTexture() {
   }
 
   const coreGradient = context.createLinearGradient(0, height * 0.96, 0, height * 0.08);
-  coreGradient.addColorStop(0, "rgba(255, 255, 255, 0.48)");
-  coreGradient.addColorStop(0.18, "rgba(255, 255, 255, 0.74)");
-  coreGradient.addColorStop(0.46, "rgba(250, 253, 255, 0.54)");
-  coreGradient.addColorStop(0.82, "rgba(255, 255, 255, 0.12)");
+  coreGradient.addColorStop(0, "rgba(255, 241, 228, 0.32)");
+  coreGradient.addColorStop(0.12, "rgba(255, 255, 255, 0.82)");
+  coreGradient.addColorStop(0.42, "rgba(247, 252, 255, 0.66)");
+  coreGradient.addColorStop(0.78, "rgba(255, 255, 255, 0.18)");
   coreGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
   context.fillStyle = coreGradient;
   context.beginPath();
@@ -185,12 +189,42 @@ function createFlameTexture() {
     height * 0.9,
     width * 0.13,
   );
-  rootGradient.addColorStop(0, "rgba(255, 255, 255, 0.42)");
+  rootGradient.addColorStop(0, "rgba(255, 239, 222, 0.52)");
+  rootGradient.addColorStop(0.46, "rgba(240, 248, 255, 0.28)");
   rootGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
   context.fillStyle = rootGradient;
   context.beginPath();
   context.ellipse(0, height * 0.9, width * 0.11, height * 0.075, 0, 0, Math.PI * 2);
   context.fill();
+
+  const edgeGradient = context.createLinearGradient(0, height * 0.94, 0, height * 0.14);
+  edgeGradient.addColorStop(0, "rgba(173, 214, 255, 0.18)");
+  edgeGradient.addColorStop(0.42, "rgba(205, 232, 255, 0.22)");
+  edgeGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+  context.strokeStyle = edgeGradient;
+  context.lineWidth = width * 0.055;
+  context.beginPath();
+  context.moveTo(0, height * 0.08);
+  context.bezierCurveTo(
+    -width * 0.06,
+    height * 0.2,
+    -width * 0.13,
+    height * 0.56,
+    -width * 0.03,
+    height * 0.94,
+  );
+  context.stroke();
+  context.beginPath();
+  context.moveTo(0, height * 0.08);
+  context.bezierCurveTo(
+    width * 0.06,
+    height * 0.2,
+    width * 0.13,
+    height * 0.56,
+    width * 0.03,
+    height * 0.94,
+  );
+  context.stroke();
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -273,10 +307,12 @@ export class PlayerActor {
       shins: [null, null],
       feet: [null, null],
       footMasters: [null, null],
-    };
-    this.locomotionAmplifiers = [];
-    this.locomotionPoseEntries = [];
-    this.modelSceneRoot = null;
+      };
+      this.locomotionAmplifiers = [];
+      this.locomotionPoseEntries = [];
+      this.lowerBodyFacingEntries = [];
+      this.lowerBodyYaw = 0;
+      this.modelSceneRoot = null;
 
     this.contactShadow = new THREE.Mesh(
       new THREE.CircleGeometry(1.85, 28),
@@ -496,6 +532,48 @@ export class PlayerActor {
 
     this.locomotionPoseEntries = nextEntries;
     this.captureLocomotionPoseEntries();
+    this.refreshLowerBodyFacingEntries();
+  }
+
+  refreshLowerBodyFacingEntries() {
+    const nextEntries = [];
+    const registeredNodes = new Set();
+    const registerNode = (node, role, weight = 1) => {
+      if (!node || registeredNodes.has(node)) {
+        return;
+      }
+
+      registeredNodes.add(node);
+      nextEntries.push({
+        node,
+        role,
+        weight,
+        worldPosition: new THREE.Vector3(),
+        worldQuaternion: new THREE.Quaternion(),
+      });
+    };
+
+    registerNode(this.locomotionNodes.hips, "hips", 0.3);
+
+    const sceneRoot = this.modelSceneRoot ?? this.modelRoot;
+    registerNode(sceneRoot?.getObjectByName?.("DEF-BODY_0118") ?? null, "body", 1.14);
+
+    sceneRoot?.traverse((object) => {
+      if (object?.isSkinnedMesh && /low_legs/i.test(object.geometry?.name ?? "")) {
+        registerNode(object, "visualLegMesh", 1.72);
+        return;
+      }
+
+      if (!object?.isBone || !lowerBodyFacingDeformBonePattern.test(object.name ?? "")) {
+        return;
+      }
+
+      const role = /^DEF-LEG\./i.test(object.name ?? "") ? "legRoot" : "legChain";
+      const weight = role === "legRoot" ? 1.38 : 1.22;
+      registerNode(object, role, weight);
+    });
+
+    this.lowerBodyFacingEntries = nextEntries;
   }
 
   captureLocomotionPoseEntries() {
@@ -517,6 +595,12 @@ export class PlayerActor {
 
     for (let index = 0; index < 2; index += 1) {
       const gunAnchor = this.namedAnchorNodes.guns[index];
+      const configuredLocalOffset = configuredLocalOffsets
+        ? index === 0
+          ? configuredLocalOffsets.left
+          : configuredLocalOffsets.right
+        : null;
+
       const configuredWorldPoint = this.getConfiguredModelPoint(
         this.getMuzzlePortOffset(index),
         new THREE.Vector3(),
@@ -530,20 +614,14 @@ export class PlayerActor {
         continue;
       }
 
-      const configuredLocalOffset = configuredLocalOffsets
-        ? index === 0
-          ? configuredLocalOffsets.left
-          : configuredLocalOffsets.right
-        : null;
-
-      if (configuredLocalOffset) {
+      if (gunAnchor && configuredLocalOffset) {
         this.barrelTipLocalOffsets[index] = this.tmpLocalPort
           .fromArray(configuredLocalOffset)
           .clone();
         continue;
       }
 
-      this.barrelTipLocalOffsets[index] = null;
+      this.barrelTipLocalOffsets[index] = configuredWorldPoint?.clone() ?? null;
     }
   }
 
@@ -689,10 +767,22 @@ export class PlayerActor {
       return;
     }
 
+    const locomotionSpeedRatio = this.getGroundLocomotionSpeedRatio(horizontalSpeed);
+
     if (locomotionMode === "walk") {
-      this.activeAnimationAction.timeScale = 1.05;
+      const walkRatio = THREE.MathUtils.clamp((locomotionSpeedRatio - 0.18) / 0.44, 0, 1);
+      this.activeAnimationAction.timeScale = THREE.MathUtils.lerp(
+        this.config.walkPlaybackMin,
+        this.config.walkPlaybackMax,
+        walkRatio,
+      );
     } else if (locomotionMode === "run") {
-      this.activeAnimationAction.timeScale = useRunClip ? 1.18 : 1.18;
+      const runRatio = THREE.MathUtils.clamp((locomotionSpeedRatio - 0.56) / 0.44, 0, 1);
+      this.activeAnimationAction.timeScale = THREE.MathUtils.lerp(
+        this.config.runPlaybackMin,
+        this.config.runPlaybackMax,
+        runRatio,
+      );
     } else {
       this.activeAnimationAction.timeScale = 1;
     }
@@ -709,6 +799,89 @@ export class PlayerActor {
 
     const speedRatio = horizontalSpeed / Math.max(this.config.groundSpeed, 0.001);
     return speedRatio >= 0.56 || this.moveIntentMagnitude >= 0.76 ? "run" : "walk";
+  }
+
+  getGroundLocomotionSpeedRatio(horizontalSpeed = this.horizontalVelocity.length()) {
+    const speedRatio = horizontalSpeed / Math.max(this.config.groundSpeed, 0.001);
+    return THREE.MathUtils.clamp(Math.max(this.moveIntentMagnitude, speedRatio), 0, 1);
+  }
+
+  updateLowerBodyFacing(deltaSeconds, moveDirection, lockTargetPosition) {
+    this.lowerBodyYaw = THREE.MathUtils.damp(
+      this.lowerBodyYaw,
+      0,
+      this.config.lowerBodyYawSmoothing,
+      deltaSeconds,
+    );
+
+    if (!Number.isFinite(this.lowerBodyYaw)) {
+      this.lowerBodyYaw = 0;
+    }
+  }
+
+  getLowerBodyFacingPivotWorldPosition(target = new THREE.Vector3()) {
+    const hipsEntry = this.lowerBodyFacingEntries.find((entry) => entry?.role === "hips" && entry.node);
+
+    if (hipsEntry) {
+      hipsEntry.node.getWorldPosition(target);
+
+      if (isFiniteVector(target)) {
+        const hipsWorld = this.tmpAnchorB.copy(target);
+        let legRootCount = 0;
+        target.set(0, 0, 0);
+
+        for (const entry of this.lowerBodyFacingEntries) {
+          if (entry?.role !== "legRoot" || !entry.node) {
+            continue;
+          }
+
+          const worldPosition = entry.node.getWorldPosition(this.tmpAnchorA);
+
+          if (!isFiniteVector(worldPosition)) {
+            continue;
+          }
+
+          target.add(worldPosition);
+          legRootCount += 1;
+        }
+
+        if (legRootCount > 0) {
+          target.divideScalar(legRootCount).lerp(hipsWorld, 0.12);
+          return target;
+        }
+
+        return target.copy(hipsWorld);
+      }
+    }
+
+    let count = 0;
+    target.set(0, 0, 0);
+
+    for (const entry of this.lowerBodyFacingEntries) {
+      if (entry?.role !== "legRoot" || !entry.node) {
+        continue;
+      }
+
+      const worldPosition = entry.node.getWorldPosition(this.tmpAnchorA);
+
+      if (!isFiniteVector(worldPosition)) {
+        continue;
+      }
+
+      target.add(worldPosition);
+      count += 1;
+    }
+
+    if (count > 0) {
+      target.divideScalar(count);
+      return target;
+    }
+
+    return this.getWorldPosition(target);
+  }
+
+  applyLowerBodyFacingOffset() {
+    return;
   }
 
   applyLocalRotationOffset(node, x = 0, y = 0, z = 0) {
@@ -1071,8 +1244,8 @@ export class PlayerActor {
     const outer = new THREE.Mesh(
       this.thrusterOuterGeometry,
       createFlameSheetMaterial({
-        color: "#dff3ff",
-        opacity: 0.38,
+        color: "#a8dcff",
+        opacity: 0.74,
         texture: this.thrusterFlameTexture,
       }),
     );
@@ -1081,7 +1254,7 @@ export class PlayerActor {
       this.thrusterInnerGeometry,
       createFlameSheetMaterial({
         color: "#f9fdff",
-        opacity: 0.56,
+        opacity: 0.62,
         texture: this.thrusterFlameTexture,
       }),
     );
@@ -1097,27 +1270,27 @@ export class PlayerActor {
       this.thrusterFlareGeometry,
       createAdditiveMaterial({
         color: "#fffaf6",
-        opacity: 0.18,
+        opacity: 0.26,
       }),
     );
     const rootGlow = new THREE.Mesh(
       this.thrusterFlareGeometry,
       createAdditiveMaterial({
         color: "#f5fbff",
-        opacity: 0.26,
+        opacity: 0.34,
       }),
     );
     const sideBillboard = new THREE.Sprite(
       createFlameSpriteMaterial({
-        color: "#dff5ff",
-        opacity: 0.3,
+        color: "#c9ecff",
+        opacity: 0.42,
         texture: this.thrusterFlameTexture,
       }),
     );
     const sideBillboardCore = new THREE.Sprite(
       createFlameSpriteMaterial({
         color: "#ffffff",
-        opacity: 0.42,
+        opacity: 0.5,
         texture: this.thrusterFlameTexture,
       }),
     );
@@ -1251,32 +1424,37 @@ export class PlayerActor {
       return;
     }
 
-    const phase = this.presentationTime * (jetActive ? 18.5 : 12.2) + visual.phase;
-    const pulse = 0.84 +
-      Math.max(0, Math.sin(phase) * 0.2) +
-      Math.max(0, Math.sin(phase * 0.52 + 0.8) * 0.12);
-    const swayX = Math.sin(phase * 0.72) * 0.006 * visibleStrength;
-    const swayZ = Math.cos(phase * 0.61) * 0.006 * visibleStrength;
-    const radiusBase = center ? 0.24 : 0.15;
+    const pulseTime = this.presentationTime;
+    const fastFlutter = Math.sin(pulseTime * (jetActive ? 76 : 54) + visual.phase * 1.6);
+    const mediumFlutter = Math.sin(pulseTime * (jetActive ? 49 : 33) + visual.phase * 0.9);
+    const slowSurge = Math.sin(pulseTime * (jetActive ? 18 : 12) + visual.phase * 0.6);
+    const pulse = THREE.MathUtils.clamp(
+      0.94 + fastFlutter * 0.08 + mediumFlutter * 0.06 + Math.max(0, slowSurge) * 0.12,
+      0.78,
+      1.18,
+    );
+    const swayX = Math.sin(pulseTime * 12.2 + visual.phase * 0.7) * 0.008 * visibleStrength;
+    const swayZ = Math.cos(pulseTime * 10.4 + visual.phase * 0.9) * 0.008 * visibleStrength;
+    const radiusBase = center ? 0.46 : 0.35;
     const outerLengthBase = center
-      ? (jetActive ? 2.4 : 1.08)
-      : (jetActive ? 1.54 : 0.84);
+      ? (jetActive ? 4.45 : 2.28)
+      : (jetActive ? 3.12 : 1.86);
     const innerLengthBase = center
-      ? (jetActive ? 1.68 : 0.74)
-      : (jetActive ? 1.02 : 0.58);
+      ? (jetActive ? 2.72 : 1.34)
+      : (jetActive ? 1.82 : 1.06);
     const coreLengthBase = center
-      ? (jetActive ? 0.94 : 0.42)
-      : (jetActive ? 0.62 : 0.34);
+      ? (jetActive ? 1.46 : 0.68)
+      : (jetActive ? 0.98 : 0.58);
     const outerLength = outerLengthBase * pulse;
-    const innerLength = innerLengthBase * (0.92 + Math.sin(phase * 1.24) * 0.08);
-    const coreLength = coreLengthBase * (0.88 + Math.cos(phase * 1.42) * 0.07);
-    const outerRadius = radiusBase + visibleStrength * (center ? 0.07 : 0.05);
+    const innerLength = innerLengthBase * (0.94 + mediumFlutter * 0.06);
+    const coreLength = coreLengthBase * (0.9 + fastFlutter * 0.04);
+    const outerRadius = radiusBase + visibleStrength * (center ? 0.22 : 0.17);
     const innerRadius = outerRadius * 0.62;
     const coreRadius = outerRadius * 0.18;
-    const outerWidth = outerRadius * (center ? 0.98 : 0.82);
-    const innerWidth = innerRadius * (center ? 0.78 : 0.66);
+    const outerWidth = outerRadius * (center ? 1.42 : 1.26);
+    const innerWidth = innerRadius * (center ? 0.84 : 0.72);
     const coreWidth = coreRadius * 0.54;
-    const flameBaseLift = center ? 0.015 : 0.01;
+    const flameBaseLift = center ? 0.03 : 0.022;
 
     visual.group.visible = true;
     visual.group.position.copy(localPosition);
@@ -1284,7 +1462,7 @@ export class PlayerActor {
 
     visual.outer.scale.set(outerWidth, outerLength, 1);
     visual.outer.position.set(swayX, outerLength * 0.5 + flameBaseLift, swayZ);
-    visual.outerCross.scale.set(outerWidth * 0.88, outerLength, 1);
+    visual.outerCross.scale.set(outerWidth * 1.1, outerLength, 1);
     visual.outerCross.position.copy(visual.outer.position);
     visual.inner.scale.set(innerWidth, innerLength, 1);
     visual.inner.position.set(swayX * 0.36, innerLength * 0.46 + flameBaseLift, swayZ * 0.36);
@@ -1297,46 +1475,48 @@ export class PlayerActor {
     visual.sideBillboard.visible = false;
     visual.sideBillboardCore.visible = false;
     visual.flare.scale.set(
-      center ? 0.64 + visibleStrength * 0.08 : 0.42 + visibleStrength * 0.06,
+      center ? 0.54 + visibleStrength * 0.08 : 0.36 + visibleStrength * 0.06,
       0.16,
-      center ? 0.64 + visibleStrength * 0.08 : 0.42 + visibleStrength * 0.06,
+      center ? 0.54 + visibleStrength * 0.08 : 0.36 + visibleStrength * 0.06,
     );
     visual.rootGlow.scale.setScalar(
-      center ? 0.28 + visibleStrength * 0.08 : 0.2 + visibleStrength * 0.05,
+      center ? 0.18 + visibleStrength * 0.05 : 0.14 + visibleStrength * 0.04,
     );
-    visual.outer.material.color.set(center ? "#dceeff" : "#d9ebff");
-    visual.outerCross.material.color.set(center ? "#dceeff" : "#d9ebff");
+    visual.outer.material.color.set(center ? "#9fd4ff" : "#addcff");
+    visual.outerCross.material.color.set(center ? "#9fd4ff" : "#addcff");
     visual.inner.material.color.set("#fbfdff");
     visual.innerCross.material.color.set("#fbfdff");
-    visual.rootGlow.material.color.set("#eef7ff");
-    visual.flare.material.color.set("#f7fbff");
+    visual.sideBillboard.material.color.set(center ? "#b9dcff" : "#c6e6ff");
+    visual.sideBillboardCore.material.color.set("#ffffff");
+    visual.rootGlow.material.color.set("#fff4ec");
+    visual.flare.material.color.set("#fff8f2");
 
     visual.outer.material.opacity = THREE.MathUtils.clamp(
-      (center ? 0.24 : 0.18) + visibleStrength * (jetActive ? 0.08 : 0.04),
+      (center ? 0.8 : 0.72) + visibleStrength * (jetActive ? 0.26 : 0.2),
       0,
-      0.42,
+      1,
     );
-    visual.outerCross.material.opacity = visual.outer.material.opacity * 0.86;
+    visual.outerCross.material.opacity = visual.outer.material.opacity * 0.98;
     visual.inner.material.opacity = THREE.MathUtils.clamp(
-      (center ? 0.34 : 0.28) + visibleStrength * (jetActive ? 0.09 : 0.05),
+      (center ? 0.58 : 0.5) + visibleStrength * (jetActive ? 0.18 : 0.12),
       0,
-      0.56,
+      0.92,
     );
     visual.innerCross.material.opacity = visual.inner.material.opacity * 0.88;
     visual.core.material.opacity = THREE.MathUtils.clamp(
-      (center ? 0.26 : 0.2) + visibleStrength * (jetActive ? 0.06 : 0.03),
+      (center ? 0.48 : 0.4) + visibleStrength * (jetActive ? 0.12 : 0.08),
       0,
-      0.42,
+      0.76,
     );
     visual.flare.material.opacity = THREE.MathUtils.clamp(
-      (center ? 0.18 : 0.12) + visibleStrength * (jetActive ? 0.06 : 0.02),
+      (center ? 0.18 : 0.14) + visibleStrength * (jetActive ? 0.06 : 0.04),
       0,
-      0.3,
+      0.36,
     );
     visual.rootGlow.material.opacity = THREE.MathUtils.clamp(
-      (center ? 0.12 : 0.08) + visibleStrength * (jetActive ? 0.04 : 0.015),
+      (center ? 0.08 : 0.06) + visibleStrength * (jetActive ? 0.025 : 0.018),
       0,
-      0.22,
+      0.16,
     );
     visual.sideBillboard.material.opacity = 0;
     visual.sideBillboardCore.material.opacity = 0;
@@ -1546,6 +1726,11 @@ export class PlayerActor {
         timeScale: this.activeAnimationAction?.timeScale ?? null,
         legAngles: locomotionAngles,
       },
+      lowerBodyFacing: {
+        yaw: this.lowerBodyYaw,
+        entryCount: this.lowerBodyFacingEntries.length,
+        roles: this.lowerBodyFacingEntries.slice(0, 8).map((entry) => `${entry.role}:${entry.node?.name ?? "n/a"}`),
+      },
     };
   }
 
@@ -1572,14 +1757,29 @@ export class PlayerActor {
     return this.getExhaustDirection(index === 0 ? -1 : 1, target);
   }
 
+  getModelWorldDirectionFromLocal(localX, localY, localZ, target = new THREE.Vector3()) {
+    const modelSpaceNode = this.modelSceneRoot ?? this.modelRoot;
+    target.set(localX, localY, localZ);
+
+    if (target.lengthSq() < 0.0001) {
+      target.set(0, -1, 0);
+    } else {
+      target.normalize();
+    }
+
+    return target
+      .applyQuaternion(modelSpaceNode.getWorldQuaternion(this.tmpQuaternionB))
+      .normalize();
+  }
+
   getCenterJetExhaustDirection(target = new THREE.Vector3()) {
-    target.set(0, -1, 0);
-    return target;
+    const backwardWeight = this.state === locomotionStates.jet ? 0.52 : 0.34;
+    return this.getModelWorldDirectionFromLocal(0, -1, -backwardWeight, target);
   }
 
   getFootJetExhaustDirection(target = new THREE.Vector3()) {
-    target.set(0, -1, 0);
-    return target;
+    const backwardWeight = this.state === locomotionStates.jet ? 0.26 : 0.14;
+    return this.getModelWorldDirectionFromLocal(0, -1, -backwardWeight, target);
   }
 
   getForwardVector(target = new THREE.Vector3()) {
@@ -1617,10 +1817,11 @@ export class PlayerActor {
     this.state = locomotionStates.ground;
     this.hoverLatched = false;
     this.isAlive = true;
-    this.damageFlash = 0;
-    this.jetTimer = 0;
-    this.moveIntentMagnitude = 0;
-    this.presentationTime = 0;
+      this.damageFlash = 0;
+      this.jetTimer = 0;
+      this.moveIntentMagnitude = 0;
+      this.lowerBodyYaw = 0;
+      this.presentationTime = 0;
     this.locomotionMode = "idle";
     this.velocity.set(0, 0, 0);
     this.horizontalVelocity.set(0, 0, 0);
@@ -1810,17 +2011,18 @@ export class PlayerActor {
   }
 
   spawnJetKickFx(fx) {
+    fx.clearJetBursts?.();
     fx.spawnJetBurst(
       this.getCenterJetWorldPosition(this.tmpThrusterPosition),
       this.getCenterJetExhaustDirection(this.tmpExhaustDirection),
-      { strength: 1.56 },
+      { strength: 1.8 },
     );
 
     for (let index = 0; index < 2; index += 1) {
       fx.spawnJetBurst(
         this.getFootJetWorldPosition(index, this.tmpThrusterPosition),
         this.getFootJetExhaustDirection(this.tmpExhaustDirection),
-        { strength: 0.92 },
+        { strength: 1.15 },
       );
     }
   }
@@ -2035,6 +2237,8 @@ export class PlayerActor {
       this.forward.normalize();
     }
 
+    this.updateLowerBodyFacing(deltaSeconds, moveDirection, lockTargetPosition);
+
     const yaw = Math.atan2(this.forward.x, this.forward.z);
     this.tmpEuler.set(0, yaw, 0);
     this.tmpQuaternion.setFromEuler(this.tmpEuler);
@@ -2084,6 +2288,7 @@ export class PlayerActor {
     const bob = Number.isFinite(rawBob) ? rawBob : 0;
 
     this.amplifyLocomotionAnimation(moveRatio, locomotionMode);
+    this.applyLowerBodyFacingOffset();
 
     this.visualRoot.position.y = this.presentationBaseHeight + bob;
 
@@ -2098,33 +2303,54 @@ export class PlayerActor {
     const localForwardSpeed = this.horizontalVelocity.dot(this.forward);
     const localStrafeSpeed = this.horizontalVelocity.dot(this.tmpRight);
     const tiltSpeedReference = groundFactor > 0 ? this.config.groundSpeed : this.config.hoverSpeed;
+    const safeTiltSpeedReference = Math.max(tiltSpeedReference, 0.001);
+    const forwardTiltRatio = THREE.MathUtils.clamp(localForwardSpeed / safeTiltSpeedReference, -1, 1);
+    const strafeTiltRatio = THREE.MathUtils.clamp(localStrafeSpeed / safeTiltSpeedReference, -1, 1);
+    const verticalTiltRatio = THREE.MathUtils.clamp(
+      this.velocity.y / Math.max(this.config.hoverVerticalSpeed, 0.001),
+      -1,
+      1,
+    );
+    const jetLeanBoost = jetFactor > 0
+      ? THREE.MathUtils.clamp(1 - this.jetTimer / 0.2, 0, 1)
+      : 0;
     const tiltStateScale = groundFactor > 0
       ? (isLocomoting ? 0 : 0.72)
       : hoverFactor > 0
         ? 0.72
         : jetFactor > 0
-          ? 0.56
+          ? 0.92
           : 0.42;
     const walkLean = isLocomoting
       ? (isRunning ? 0.0012 + moveRatio * 0.0016 : 0.0008 + moveRatio * 0.001) + strideBounce * 0.0004
       : 0;
+    const jetPitchBoost = jetFactor > 0
+      ? forwardTiltRatio * (0.22 + jetLeanBoost * 0.18)
+      : 0;
+    const jetRollBoost = jetFactor > 0
+      ? strafeTiltRatio * (0.18 + jetLeanBoost * 0.12)
+      : 0;
+    const jetYawBoost = jetFactor > 0
+      ? strafeTiltRatio * -(0.06 + jetLeanBoost * 0.04)
+      : 0;
     const targetPitch =
-      THREE.MathUtils.clamp(localForwardSpeed / Math.max(tiltSpeedReference, 0.001), -1, 1) *
+      forwardTiltRatio *
         (isRunning ? 0 : isWalking ? 0 : 0.42) *
         tiltStateScale -
       (isLocomoting ? walkLean * 0.38 : walkLean) -
-      THREE.MathUtils.clamp(this.velocity.y / Math.max(this.config.hoverVerticalSpeed, 0.001), -1, 1) *
-        (hoverFactor * 0.12 + jetFactor * 0.08);
+      verticalTiltRatio * (hoverFactor * 0.12 + jetFactor * 0.08) +
+      jetPitchBoost;
     const targetRoll =
-      THREE.MathUtils.clamp(localStrafeSpeed / Math.max(tiltSpeedReference, 0.001), -1, 1) *
+      strafeTiltRatio *
       (isRunning ? 0 : isWalking ? 0 : 0.34) *
-      tiltStateScale;
+      tiltStateScale +
+      jetRollBoost;
     const safeTargetPitch = Number.isFinite(targetPitch) ? targetPitch : 0;
     const safeTargetRoll = Number.isFinite(targetRoll) ? targetRoll : 0;
     const safeTargetYaw = Number.isFinite(localStrafeSpeed)
-      ? THREE.MathUtils.clamp(localStrafeSpeed / Math.max(tiltSpeedReference, 0.001), -1, 1) *
-          (isRunning ? 0 : isWalking ? 0 : -0.06) +
-        (isLocomoting ? strideWave * (isRunning ? 0.0008 : 0.0006) * moveRatio : 0)
+      ? (isLocomoting ? strafeTiltRatio * -0.06 : 0) +
+        (isLocomoting ? strideWave * (isRunning ? 0.0008 : 0.0006) * moveRatio : 0) +
+        jetYawBoost
       : 0;
 
     this.modelRoot.rotation.x = THREE.MathUtils.damp(
@@ -2181,7 +2407,7 @@ export class PlayerActor {
       0.12 +
       groundFactor * moveRatio * 0.32 +
       hoverFactor * (0.5 + moveRatio * 0.25) +
-      jetFactor * 1.7;
+      jetFactor * 2.15;
 
     for (const material of this.boosterMaterials) {
       material.emissiveIntensity = boosterIntensity;
@@ -2204,18 +2430,20 @@ export class PlayerActor {
       0,
       1,
     );
-    const airPlumeStrength = this.state === locomotionStates.fall
-      ? 0.34 + verticalRatio * 0.22 + moveRatio * 0.1
-      : 0.32 + hoverFactor * 0.3 + verticalRatio * 0.18 + moveRatio * 0.08;
+    const falling = this.state === locomotionStates.fall;
+    const sustainActive = jetFactor > 0 || hoverFactor > 0 || falling;
+    const airPlumeStrength = falling
+      ? 0.46 + verticalRatio * 0.28 + moveRatio * 0.12
+      : 0.42 + hoverFactor * 0.34 + verticalRatio * 0.22 + moveRatio * 0.1;
     const centerStrength = jetFactor > 0
-      ? 1.62 + moveRatio * 0.26
-      : THREE.MathUtils.clamp(0.38 + hoverFactor * 0.3 + verticalRatio * 0.14, 0.34, 0.64);
+      ? 2.34 + moveRatio * 0.7 + verticalRatio * 0.26
+      : THREE.MathUtils.clamp(0.9 + hoverFactor * 0.56 + verticalRatio * 0.26, 0.82, 1.28);
     const footStrength = jetFactor > 0
-      ? 1.14 + verticalRatio * 0.18
-      : THREE.MathUtils.clamp(airPlumeStrength + 0.08, 0.34, 0.66);
+      ? 1.68 + verticalRatio * 0.38 + moveRatio * 0.2
+      : THREE.MathUtils.clamp(airPlumeStrength + 0.34, 0.78, 1.24);
     const activeStrength = Math.max(centerStrength, footStrength);
 
-    if (this.state === locomotionStates.ground || activeStrength <= 0.16) {
+    if (!sustainActive || activeStrength <= 0.16) {
       this.hideThrusterVisuals();
       this.thrusterTimer = 0;
       return;

@@ -122,8 +122,6 @@ export class GameApp {
     });
     this.lockOn = new LockOnSystem(gameConfig.lockOn);
     this.lockOn.registerTarget(this.boss);
-    this.lockOn.setInitialTarget(this.boss);
-
     this.combatCamera = new CombatCamera(this.camera);
     this.combatCamera.setInitialLockSide(this.player, this.lockOn.target);
     this.combatCamera.snap({
@@ -138,7 +136,7 @@ export class GameApp {
       root: this.mobileControlsRoot,
       forceTouchControls: this.forceTouchControls,
     });
-    this.input.setLockState(true);
+    this.input.setLockState(false);
     this.input.setVerificationButtonProbe(this.buttonProbe);
 
     this.hud = new HudView(this.hudRoot);
@@ -310,9 +308,7 @@ export class GameApp {
     this.lockOn.clear();
     this.player.resetForBattle(this.playerSpawn);
     this.boss.resetForBattle(this.bossSpawn);
-    this.lockOn.setInitialTarget(this.boss);
-    this.input.setLockState(true);
-    this.combatCamera.setInitialLockSide(this.player, this.boss);
+    this.input.setLockState(false);
     this.combatCamera.snap({
       input: { lookX: 0, lookY: 0 },
       player: this.player,
@@ -385,6 +381,7 @@ export class GameApp {
 
     const playerDebug = this.player?.getDebugSnapshot?.();
     const projectileDebug = this.projectiles?.getDebugState?.();
+    const fxDebug = this.fx?.getDebugState?.();
     const cameraMode = this.lockOn?.target ? "lock" : "free";
     const barrelLabel = projectileDebug?.lastShot
       ? projectileDebug.lastShot.barrelIndex === 0 ? "left" : "right"
@@ -392,6 +389,11 @@ export class GameApp {
     const formatVector = (vector) => vector
       ? `${vector.x.toFixed(2)}, ${vector.y.toFixed(2)}, ${vector.z.toFixed(2)}`
       : "n/a";
+    const shotOrigin = projectileDebug?.lastShot?.origin ?? null;
+    const fxOrigin = fxDebug?.lastMuzzle?.origin ?? null;
+    const shotFxDelta = shotOrigin && fxOrigin
+      ? shotOrigin.distanceTo(fxOrigin)
+      : null;
 
     this.debugStatusEl.textContent = [
       `scenario: ${this.verificationScenario?.name ?? "none"}`,
@@ -411,7 +413,9 @@ export class GameApp {
       `raw1: ${formatVector(playerDebug?.rawGunAnchors?.[1]?.position)}`,
       `muzzle0: ${formatVector(playerDebug?.gunAnchors?.[0]?.position)}`,
       `muzzle1: ${formatVector(playerDebug?.gunAnchors?.[1]?.position)}`,
-      `shotOrigin: ${formatVector(projectileDebug?.lastShot?.origin)}`,
+      `shotOrigin: ${formatVector(shotOrigin)}`,
+      `fxOrigin: ${formatVector(fxOrigin)}`,
+      `shotFxDelta: ${Number.isFinite(shotFxDelta) ? shotFxDelta.toFixed(4) : "n/a"}`,
     ].join("\n");
   }
 
@@ -445,6 +449,11 @@ export class GameApp {
           : "animt=n/a",
       );
       titleParts.push(`act=${playerDebug?.animation?.hasAction ? 1 : 0}`);
+      const lowerBodyYaw = playerDebug?.lowerBodyFacing?.yaw;
+      if (Number.isFinite(lowerBodyYaw)) {
+        titleParts.push(`lby=${lowerBodyYaw.toFixed(2)}`);
+      }
+      titleParts.push(`lbn=${playerDebug?.lowerBodyFacing?.entryCount ?? 0}`);
     }
 
     if (this.debugVisualizationEnabled && cameraDebug?.position && cameraDebug?.lookTarget) {
@@ -642,6 +651,10 @@ export class GameApp {
         break;
       case "left-barrel-fire":
       case "right-barrel-fire":
+      case "left-barrel-fire-macro":
+      case "right-barrel-fire-macro":
+      case "left-barrel-fire-top":
+      case "right-barrel-fire-top":
       case "left-barrel-fire-moving":
       case "right-barrel-fire-moving":
         this.positionPlayerForVerification({
@@ -656,6 +669,7 @@ export class GameApp {
       case "ground-walk":
       case "ground-run":
       case "ground-turn":
+      case "ground-lock-strafe":
         this.positionPlayerForVerification({
           x: 0,
           z: 110,
@@ -663,7 +677,7 @@ export class GameApp {
           state: locomotionStates.ground,
           hoverLatched: false,
         });
-        this.syncVerificationLockState(false);
+        this.syncVerificationLockState(scenario.name === "ground-lock-strafe");
         break;
       case "high-air-lock":
         this.positionPlayerForVerification({
@@ -712,11 +726,18 @@ export class GameApp {
         break;
       case "left-barrel-fire":
       case "right-barrel-fire":
+      case "left-barrel-fire-macro":
+      case "right-barrel-fire-macro":
+      case "left-barrel-fire-top":
+      case "right-barrel-fire-top":
       case "left-barrel-fire-moving":
       case "right-barrel-fire-moving":
         this.syncVerificationLockState(false);
         this.projectiles.nextBarrelIndex =
-          scenario.name === "left-barrel-fire" || scenario.name === "left-barrel-fire-moving"
+          scenario.name === "left-barrel-fire" ||
+          scenario.name === "left-barrel-fire-macro" ||
+          scenario.name === "left-barrel-fire-top" ||
+          scenario.name === "left-barrel-fire-moving"
             ? 0
             : 1;
         input.shootHeld = true;
@@ -780,6 +801,22 @@ export class GameApp {
 
         if (scenario.elapsed >= 1.35 || this.player.position.z < 66) {
           scenario.elapsed = 0;
+          this.positionPlayerForVerification({
+            x: 0,
+            z: 110,
+            altitude: 0,
+            state: locomotionStates.ground,
+            hoverLatched: false,
+          });
+          this.snapCameraToScenario();
+        }
+        break;
+      case "ground-lock-strafe":
+        input.moveX = 0.94;
+        input.moveY = 0.08;
+        this.syncVerificationLockState(true);
+
+        if (Math.abs(this.player.position.x) > 34 || this.player.position.z < 72) {
           this.positionPlayerForVerification({
             x: 0,
             z: 110,
@@ -866,12 +903,16 @@ export class GameApp {
         this.combatCamera.freeLookTimer = 999;
         break;
       case "left-barrel-fire":
+      case "left-barrel-fire-macro":
+      case "left-barrel-fire-top":
       case "left-barrel-fire-moving":
         this.combatCamera.lookYaw = Math.PI + 0.88;
         this.combatCamera.lookPitch = 0.2;
         this.combatCamera.freeLookTimer = 999;
         break;
       case "right-barrel-fire":
+      case "right-barrel-fire-macro":
+      case "right-barrel-fire-top":
       case "right-barrel-fire-moving":
         this.combatCamera.lookYaw = Math.PI - 0.88;
         this.combatCamera.lookPitch = 0.2;
@@ -882,6 +923,11 @@ export class GameApp {
       case "ground-turn":
         this.combatCamera.lookYaw = Math.PI - Math.PI / 2;
         this.combatCamera.lookPitch = 0.08;
+        this.combatCamera.freeLookTimer = 999;
+        break;
+      case "ground-lock-strafe":
+        this.combatCamera.lookYaw = Math.PI - 0.74;
+        this.combatCamera.lookPitch = 0.14;
         this.combatCamera.freeLookTimer = 999;
         break;
       default:
@@ -937,6 +983,32 @@ export class GameApp {
           .addScaledVector(this.tmpVerificationRight, -2.2);
         break;
       }
+      case "left-barrel-fire-macro": {
+        cameraPosition
+          .copy(playerBase)
+          .addScaledVector(playerForward, -2.45)
+          .addScaledVector(this.tmpVerificationUp, 2.62)
+          .addScaledVector(this.tmpVerificationRight, -4.38);
+        cameraLook
+          .copy(playerBase)
+          .addScaledVector(playerForward, 1.28)
+          .addScaledVector(this.tmpVerificationUp, 2.46)
+          .addScaledVector(this.tmpVerificationRight, -2.76);
+        break;
+      }
+      case "left-barrel-fire-top": {
+        cameraPosition
+          .copy(playerBase)
+          .addScaledVector(playerForward, 0.8)
+          .addScaledVector(this.tmpVerificationUp, 10.2)
+          .addScaledVector(this.tmpVerificationRight, -2.85);
+        cameraLook
+          .copy(playerBase)
+          .addScaledVector(playerForward, 0.75)
+          .addScaledVector(this.tmpVerificationUp, 3.05)
+          .addScaledVector(this.tmpVerificationRight, -2.25);
+        break;
+      }
       case "right-barrel-fire": {
         cameraPosition
           .copy(playerBase)
@@ -948,6 +1020,32 @@ export class GameApp {
           .addScaledVector(playerForward, 1.8)
           .addScaledVector(this.tmpVerificationUp, 3.0)
           .addScaledVector(this.tmpVerificationRight, 2.2);
+        break;
+      }
+      case "right-barrel-fire-macro": {
+        cameraPosition
+          .copy(playerBase)
+          .addScaledVector(playerForward, -2.45)
+          .addScaledVector(this.tmpVerificationUp, 2.62)
+          .addScaledVector(this.tmpVerificationRight, 4.38);
+        cameraLook
+          .copy(playerBase)
+          .addScaledVector(playerForward, 1.28)
+          .addScaledVector(this.tmpVerificationUp, 2.46)
+          .addScaledVector(this.tmpVerificationRight, 2.76);
+        break;
+      }
+      case "right-barrel-fire-top": {
+        cameraPosition
+          .copy(playerBase)
+          .addScaledVector(playerForward, 0.8)
+          .addScaledVector(this.tmpVerificationUp, 10.2)
+          .addScaledVector(this.tmpVerificationRight, 2.85);
+        cameraLook
+          .copy(playerBase)
+          .addScaledVector(playerForward, 0.75)
+          .addScaledVector(this.tmpVerificationUp, 3.05)
+          .addScaledVector(this.tmpVerificationRight, 2.25);
         break;
       }
       case "left-barrel-fire-moving": {
@@ -988,6 +1086,18 @@ export class GameApp {
           .copy(playerBase)
           .addScaledVector(playerForward, 0.45)
           .addScaledVector(this.tmpVerificationUp, 1.92);
+        break;
+      case "ground-lock-strafe":
+        cameraPosition
+          .copy(playerBase)
+          .addScaledVector(playerForward, -6.9)
+          .addScaledVector(this.tmpVerificationUp, 3.05)
+          .addScaledVector(this.tmpVerificationRight, 5.4);
+        cameraLook
+          .copy(playerBase)
+          .addScaledVector(playerForward, 0.85)
+          .addScaledVector(this.tmpVerificationUp, 2.18)
+          .addScaledVector(this.tmpVerificationRight, 0.9);
         break;
       default:
         return;
