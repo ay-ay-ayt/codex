@@ -148,7 +148,6 @@ export class ProjectileSystem {
       this.projectileCoreGeometry,
       this.projectileCoreMaterial.clone(),
     );
-
     shell.position.y = this.projectileLength * 0.5;
     core.position.y = this.projectileCoreLength * 0.5;
     mesh.add(shell);

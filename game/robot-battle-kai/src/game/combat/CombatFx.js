@@ -1,13 +1,162 @@
 import * as THREE from "three";
 
-function createAdditiveMaterial({ color, opacity, side = THREE.DoubleSide }) {
+function createAdditiveMaterial({
+  color,
+  opacity,
+  side = THREE.DoubleSide,
+  depthTest = true,
+}) {
   return new THREE.MeshBasicMaterial({
     color,
     transparent: true,
     opacity,
+    depthTest,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     side,
+  });
+}
+
+function createTexturedAdditiveMaterial({
+  color,
+  opacity,
+  texture,
+  side = THREE.DoubleSide,
+  depthTest = true,
+}) {
+  return new THREE.MeshBasicMaterial({
+    color,
+    map: texture,
+    alphaMap: texture,
+    transparent: true,
+    opacity,
+    depthTest,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side,
+  });
+}
+
+function createSpriteAdditiveMaterial({
+  color,
+  opacity,
+  texture,
+  depthTest = true,
+}) {
+  return new THREE.SpriteMaterial({
+    color,
+    map: texture,
+    transparent: true,
+    opacity,
+    depthTest,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+}
+
+function createCanvasTexture(width, height, draw) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return null;
+  }
+
+  draw(context, width, height);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createMuzzleBladeTexture() {
+  return createCanvasTexture(128, 256, (context, width, height) => {
+    context.clearRect(0, 0, width, height);
+    context.translate(width * 0.5, 0);
+
+    const body = context.createLinearGradient(0, height, 0, 0);
+    body.addColorStop(0, "rgba(255,255,255,0)");
+    body.addColorStop(0.04, "rgba(255,255,255,1)");
+    body.addColorStop(0.18, "rgba(255,255,255,0.98)");
+    body.addColorStop(0.42, "rgba(255,255,255,0.84)");
+    body.addColorStop(0.74, "rgba(255,255,255,0.26)");
+    body.addColorStop(0.94, "rgba(255,255,255,0.04)");
+    body.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = body;
+
+    context.beginPath();
+    context.moveTo(0, height * 0.01);
+    context.lineTo(-width * 0.14, height * 0.16);
+    context.lineTo(-width * 0.085, height * 0.48);
+    context.lineTo(-width * 0.04, height * 0.98);
+    context.lineTo(width * 0.04, height * 0.98);
+    context.lineTo(width * 0.085, height * 0.48);
+    context.lineTo(width * 0.14, height * 0.16);
+    context.closePath();
+    context.fill();
+
+    context.strokeStyle = "rgba(255,255,255,0.46)";
+    context.lineWidth = width * 0.028;
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(-width * 0.02, height * 0.18);
+    context.lineTo(-width * 0.19, height * 0.72);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(width * 0.02, height * 0.18);
+    context.lineTo(width * 0.19, height * 0.72);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(0, height * 0.14);
+    context.lineTo(0, height * 0.9);
+    context.stroke();
+  });
+}
+
+function createMuzzleFlareTexture() {
+  return createCanvasTexture(128, 128, (context, width, height) => {
+    context.clearRect(0, 0, width, height);
+    const cx = width * 0.5;
+    const cy = height * 0.5;
+
+    const radial = context.createRadialGradient(cx, cy, width * 0.01, cx, cy, width * 0.16);
+    radial.addColorStop(0, "rgba(255,255,255,1)");
+    radial.addColorStop(0.22, "rgba(255,244,222,0.86)");
+    radial.addColorStop(0.52, "rgba(255,214,146,0.18)");
+    radial.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = radial;
+    context.beginPath();
+    context.arc(cx, cy, width * 0.16, 0, Math.PI * 2);
+    context.fill();
+
+    context.strokeStyle = "rgba(255,239,214,0.82)";
+    context.lineWidth = width * 0.044;
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(cx, cy - height * 0.42);
+    context.lineTo(cx, cy + height * 0.42);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(cx - width * 0.42, cy);
+    context.lineTo(cx + width * 0.42, cy);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(cx - width * 0.28, cy - height * 0.28);
+    context.lineTo(cx + width * 0.28, cy + height * 0.28);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(cx + width * 0.28, cy - height * 0.28);
+    context.lineTo(cx - width * 0.28, cy + height * 0.28);
+    context.stroke();
   });
 }
 
@@ -31,6 +180,8 @@ export class CombatFx {
     this.muzzleCoreLength = 0.72;
     this.jetCoreLength = 0.72;
     this.jetPlumeLength = 1.08;
+    this.muzzleBladeTexture = createMuzzleBladeTexture();
+    this.muzzleFlareTexture = createMuzzleFlareTexture();
     this.lastMuzzleDebug = null;
     this.recentExhaustDebug = [];
   }
@@ -150,6 +301,21 @@ export class CombatFx {
     this.spawnExhaustEffect("thruster", position, direction, strength);
   }
 
+  clearJetBursts() {
+    for (let index = this.effects.length - 1; index >= 0; index -= 1) {
+      const effect = this.effects[index];
+
+      if (effect?.type !== "jet") {
+        continue;
+      }
+
+      this.disposeEffect(effect);
+      this.effects.splice(index, 1);
+    }
+
+    this.recentExhaustDebug = this.recentExhaustDebug.filter((entry) => entry.type !== "jet");
+  }
+
   spawnExhaustEffect(type, position, direction, strength) {
     const plumeDirection = direction.clone().normalize();
     this.recentExhaustDebug.unshift({
@@ -212,24 +378,24 @@ export class CombatFx {
     this.group.add(plume);
     this.group.add(flare);
 
-    this.effects.push({
+      this.effects.push({
       type,
       core,
       plume,
       flare,
       origin: position.clone(),
       direction: plumeDirection,
-      driftSpeed: type === "jet" ? 0.002 + strength * 0.004 : 0.004 + strength * 0.008,
+      driftSpeed: type === "jet" ? 0.0004 + strength * 0.0012 : 0.004 + strength * 0.008,
       strength,
       life: 0,
       duration:
         type === "jet"
-          ? THREE.MathUtils.lerp(0.04, 0.06, Math.min(1, strength / 1.5))
+          ? THREE.MathUtils.lerp(0.022, 0.034, Math.min(1, strength / 1.8))
           : THREE.MathUtils.lerp(0.06, 0.09, Math.min(1, strength)),
       travel: 0,
       maxTravel:
         type === "jet"
-          ? THREE.MathUtils.lerp(0.006, 0.018, Math.min(1, strength / 1.5))
+          ? THREE.MathUtils.lerp(0.001, 0.005, Math.min(1, strength / 1.8))
           : THREE.MathUtils.lerp(0.01, 0.02, Math.min(1, strength)),
     });
   }
@@ -255,7 +421,11 @@ export class CombatFx {
 
     for (let index = this.effects.length - 1; index >= 0; index -= 1) {
       const effect = this.effects[index];
-      effect.life += deltaSeconds;
+      const effectDeltaSeconds =
+        effect.type === "muzzle"
+          ? Math.min(deltaSeconds, 1 / 45)
+          : deltaSeconds;
+      effect.life += effectDeltaSeconds;
       const progress = Math.min(effect.life / effect.duration, 1);
       const easeOut = 1 - (1 - progress) * (1 - progress);
 
@@ -265,7 +435,10 @@ export class CombatFx {
         effect.burst.material.opacity = (1 - progress) * 0.75;
         effect.ring.material.opacity = (1 - progress) * 0.9;
       } else if (effect.type === "muzzle") {
-        effect.travel = Math.min(effect.maxTravel, effect.travel + effect.driftSpeed * deltaSeconds);
+        effect.travel = Math.min(
+          effect.maxTravel,
+          effect.travel + effect.driftSpeed * effectDeltaSeconds,
+        );
         const coreScaleY = 0.44 + easeOut * 1.2;
         const shellScaleY = 0.52 + easeOut * 1.45;
 
@@ -298,7 +471,7 @@ export class CombatFx {
       } else {
         effect.travel = Math.min(effect.maxTravel, effect.travel + effect.driftSpeed * deltaSeconds);
         const exhaustFade = Math.max(0, 1 - progress);
-        const softFade = Math.pow(exhaustFade, 1.35);
+        const softFade = Math.pow(exhaustFade, effect.type === "jet" ? 2.2 : 1.35);
 
         const radiusScale = effect.type === "jet" ? 1.12 : 0.96;
         const lengthScale = effect.type === "jet" ? 0.18 : 0.22;
@@ -366,6 +539,19 @@ export class CombatFx {
   }
 
   getDebugState() {
+    const activeMuzzles = this.effects
+      .filter((effect) => effect?.type === "muzzle")
+      .slice(0, 3)
+      .map((effect) => ({
+        origin: effect.origin.clone(),
+        direction: effect.direction.clone(),
+        core: effect.core?.position.clone() ?? null,
+        wake: effect.shell?.position.clone() ?? effect.wake?.position.clone() ?? null,
+        flare: effect.flare?.position.clone() ?? null,
+        bloom: null,
+        ring: effect.flare?.position.clone() ?? effect.ring?.position.clone() ?? null,
+      }));
+
     return {
       lastMuzzle: this.lastMuzzleDebug
         ? {
@@ -373,6 +559,7 @@ export class CombatFx {
             direction: this.lastMuzzleDebug.direction.clone(),
           }
         : null,
+      activeMuzzles,
       recentExhaust: this.recentExhaustDebug.map((entry) => ({
         type: entry.type,
         origin: entry.origin.clone(),

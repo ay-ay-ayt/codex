@@ -45,6 +45,10 @@ export class VerificationDebugOverlay {
     const isBarrelScenario =
       snapshot.scenario === "left-barrel-fire" ||
       snapshot.scenario === "right-barrel-fire" ||
+      snapshot.scenario === "left-barrel-fire-macro" ||
+      snapshot.scenario === "right-barrel-fire-macro" ||
+      snapshot.scenario === "left-barrel-fire-top" ||
+      snapshot.scenario === "right-barrel-fire-top" ||
       snapshot.scenario === "left-barrel-fire-moving" ||
       snapshot.scenario === "right-barrel-fire-moving";
     const activeMarkers = new Set();
@@ -124,18 +128,28 @@ export class VerificationDebugOverlay {
     }
 
     for (const [index, anchor] of (snapshot.player?.gunAnchors ?? []).entries()) {
-      drawPoint(`gun-anchor-${index}`, anchor.position, "#ff9c2f", 1.18);
+      drawPoint(
+        `gun-anchor-${index}`,
+        anchor.position,
+        isBarrelScenario ? "#57ffad" : "#ff9c2f",
+        isBarrelScenario ? 1.46 : 1.18,
+      );
     }
 
     if (snapshot.projectiles?.lastShot) {
-      drawPoint("shot-anchor", snapshot.projectiles.lastShot.anchor, "#ff2db2", 1.2);
+      drawPoint(
+        "shot-anchor",
+        snapshot.projectiles.lastShot.anchor,
+        isBarrelScenario ? "#57ffad" : "#ff2db2",
+        isBarrelScenario ? 1.5 : 1.2,
+      );
       drawVector(
         "shot-origin",
         snapshot.projectiles.lastShot.origin,
         snapshot.projectiles.lastShot.direction,
         3.6,
-        "#9cff6a",
-        1.26,
+        isBarrelScenario ? "#b8ff5f" : "#9cff6a",
+        isBarrelScenario ? 1.52 : 1.26,
       );
     }
 
@@ -145,8 +159,35 @@ export class VerificationDebugOverlay {
         snapshot.fx.lastMuzzle.origin,
         snapshot.fx.lastMuzzle.direction,
         2.3,
-        "#ffffff",
-        1.12,
+        isBarrelScenario ? "#7dfdff" : "#ffffff",
+        isBarrelScenario ? 1.36 : 1.12,
+      );
+    }
+
+    for (const [index, muzzle] of (snapshot.fx?.activeMuzzles ?? []).entries()) {
+      drawPoint(
+        `fx-active-core-${index}`,
+        muzzle.core,
+        "#fff4be",
+        isBarrelScenario ? 0.7 : 0.54,
+      );
+      drawPoint(
+        `fx-active-wake-${index}`,
+        muzzle.wake,
+        "#ffb889",
+        isBarrelScenario ? 0.58 : 0.46,
+      );
+      drawPoint(
+        `fx-active-bloom-${index}`,
+        muzzle.bloom,
+        "#94f3ff",
+        isBarrelScenario ? 0.48 : 0.38,
+      );
+      drawPoint(
+        `fx-active-ring-${index}`,
+        muzzle.ring,
+        "#ffe2c6",
+        isBarrelScenario ? 0.44 : 0.34,
       );
     }
 

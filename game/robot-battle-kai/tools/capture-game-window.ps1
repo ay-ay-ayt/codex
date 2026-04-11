@@ -4,9 +4,11 @@ param(
   [int]$ProcessId,
   [string]$OutputPath,
   [int]$DelayMs = 450,
+  [int]$VirtualTimeBudgetMs = 12000,
   [string]$Url,
   [ValidateSet("edge", "chrome")]
   [string]$Browser = "chrome",
+  [switch]$BackgroundCapture,
   [switch]$MaximizeWindow,
   [int]$WindowX = 20,
   [int]$WindowY = 20,
@@ -63,6 +65,9 @@ public static class WindowCaptureNative {
 
     [DllImport("user32.dll")]
     public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+
+    [DllImport("user32.dll")]
+    public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdcBlt, uint nFlags);
 }
 "@
 
@@ -124,14 +129,24 @@ if ($resolvedWindowHandle -eq [IntPtr]::Zero) {
     throw "Could not find $Browser for headless capture."
   }
 
-  & $browserExe `
-    "--headless=new" `
-    "--disable-gpu" `
-    "--hide-scrollbars" `
-    "--window-size=1280,960" `
-    "--virtual-time-budget=12000" `
-    "--screenshot=$OutputPath" `
+  $headlessArgs = @(
+    "--headless=new",
+    "--enable-webgl",
+    "--ignore-gpu-blocklist",
+    "--use-angle=swiftshader",
+    "--run-all-compositor-stages-before-draw",
+    "--hide-scrollbars",
+    "--window-size=1280,960",
+    "--virtual-time-budget=$VirtualTimeBudgetMs",
+    "--screenshot=$OutputPath",
     $Url
+  )
+
+  $headlessProc = Start-Process -FilePath $browserExe -ArgumentList $headlessArgs -PassThru -Wait
+
+  for ($attempt = 0; $attempt -lt 20 -and -not (Test-Path -LiteralPath $OutputPath); $attempt += 1) {
+    Start-Sleep -Milliseconds 200
+  }
 
   if (-not (Test-Path -LiteralPath $OutputPath)) {
     throw "Headless capture failed for $Url."
@@ -140,42 +155,6 @@ if ($resolvedWindowHandle -eq [IntPtr]::Zero) {
   Write-Output $OutputPath
   exit 0
 }
-
-[WindowCaptureNative]::ShowWindowAsync(
-  $resolvedWindowHandle,
-  [WindowCaptureNative]::SW_RESTORE
-) | Out-Null
-
-if ($MaximizeWindow) {
-  [WindowCaptureNative]::ShowWindowAsync(
-    $resolvedWindowHandle,
-    [WindowCaptureNative]::SW_MAXIMIZE
-  ) | Out-Null
-} else {
-  [WindowCaptureNative]::MoveWindow(
-    $resolvedWindowHandle,
-    $WindowX,
-    $WindowY,
-    $WindowWidth,
-    $WindowHeight,
-    $true
-  ) | Out-Null
-}
-
-[void][System.Windows.Forms.Application]::DoEvents()
-[System.Windows.Forms.SendKeys]::SendWait("%")
-[WindowCaptureNative]::SetForegroundWindow($resolvedWindowHandle) | Out-Null
-
-if ($windowProcess) {
-  try {
-    $appActivator = New-Object -ComObject WScript.Shell
-    $appActivator.AppActivate([int]$windowProcess.Id) | Out-Null
-  } catch {
-  }
-}
-
-[WindowCaptureNative]::SetForegroundWindow($resolvedWindowHandle) | Out-Null
-Start-Sleep -Milliseconds $DelayMs
 
 $rect = New-Object WindowCaptureNative+RECT
 $width = 0
@@ -201,11 +180,62 @@ $bitmap = New-Object System.Drawing.Bitmap $width, $height
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
 
 try {
-  $graphics.CopyFromScreen(
-    [System.Drawing.Point]::new($rect.Left, $rect.Top),
-    [System.Drawing.Point]::Empty,
-    [System.Drawing.Size]::new($width, $height)
-  )
+  if ($BackgroundCapture) {
+    $hdc = $graphics.GetHdc()
+
+    try {
+      $printed = [WindowCaptureNative]::PrintWindow($resolvedWindowHandle, $hdc, 2)
+    } finally {
+      $graphics.ReleaseHdc($hdc)
+    }
+
+    if (-not $printed) {
+      throw "PrintWindow failed for handle $resolvedWindowHandle."
+    }
+  } else {
+    [WindowCaptureNative]::ShowWindowAsync(
+      $resolvedWindowHandle,
+      [WindowCaptureNative]::SW_RESTORE
+    ) | Out-Null
+
+    if ($MaximizeWindow) {
+      [WindowCaptureNative]::ShowWindowAsync(
+        $resolvedWindowHandle,
+        [WindowCaptureNative]::SW_MAXIMIZE
+      ) | Out-Null
+    } else {
+      [WindowCaptureNative]::MoveWindow(
+        $resolvedWindowHandle,
+        $WindowX,
+        $WindowY,
+        $WindowWidth,
+        $WindowHeight,
+        $true
+      ) | Out-Null
+    }
+
+    [void][System.Windows.Forms.Application]::DoEvents()
+    [System.Windows.Forms.SendKeys]::SendWait("%")
+    [WindowCaptureNative]::SetForegroundWindow($resolvedWindowHandle) | Out-Null
+
+    if ($windowProcess) {
+      try {
+        $appActivator = New-Object -ComObject WScript.Shell
+        $appActivator.AppActivate([int]$windowProcess.Id) | Out-Null
+      } catch {
+      }
+    }
+
+    [WindowCaptureNative]::SetForegroundWindow($resolvedWindowHandle) | Out-Null
+    Start-Sleep -Milliseconds $DelayMs
+
+    $graphics.CopyFromScreen(
+      [System.Drawing.Point]::new($rect.Left, $rect.Top),
+      [System.Drawing.Point]::Empty,
+      [System.Drawing.Size]::new($width, $height)
+    )
+  }
+
   $bitmap.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
 } finally {
   $graphics.Dispose()
