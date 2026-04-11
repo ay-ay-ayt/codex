@@ -21,8 +21,9 @@ function applyCircularDeadzone(x, y, deadzone = 0.12) {
 export class MobileControlsOverlay {
   constructor(root, { forceVisible = false } = {}) {
     this.root = root;
+    this.forceVisible = Boolean(forceVisible);
     this.visible =
-      forceVisible ||
+      this.forceVisible ||
       window.matchMedia("(pointer: coarse)").matches ||
       "ontouchstart" in window;
     this.locked = true;
@@ -50,7 +51,7 @@ export class MobileControlsOverlay {
 
   build() {
     this.root.innerHTML = `
-      <div class="mobile-controls ${this.visible ? "mobile-controls--visible" : ""}">
+      <div class="mobile-controls ${this.visible ? "mobile-controls--visible" : ""} ${this.forceVisible ? "mobile-controls--forced" : ""}">
         <div class="mobile-look-zone" data-role="look-zone"></div>
 
         <div class="mobile-joystick-cluster">

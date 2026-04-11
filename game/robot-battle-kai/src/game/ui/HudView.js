@@ -152,6 +152,7 @@ export class HudView {
       ? "Left stick move / right lane ascend-descend / right buttons shoot jet hover lock"
       : "WASD move / Space Ctrl / Shift / E / Q / LMB shoot / RMB look";
 
+    this.shell.classList.toggle("hud-shell--touch", usingTouch);
     this.shell.classList.toggle("hud-shell--battle-ended", battleEnded);
     this.endOverlay.classList.toggle("hud-end-overlay--visible", battleEnded);
 
