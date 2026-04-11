@@ -1,0 +1,11 @@
+{
+  "name": "Sky Ace Duel 3D",
+  "short_name": "SkyAce3D",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#030c18",
+  "theme_color": "#030c18",
+  "start_url": "./index.html?v=352"
+}
+
+
