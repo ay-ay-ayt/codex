@@ -149,7 +149,7 @@ export class HudView {
     this.damageFlash.style.opacity = `${Math.max(0, damageFlashAmount)}`;
     this.help.classList.toggle("hud-help--touch", usingTouch);
     this.help.textContent = usingTouch
-      ? "Left stick move / right lane ascend-descend / right buttons shoot jet hover lock"
+      ? ""
       : "WASD move / Space Ctrl / Shift / E / Q / LMB shoot / RMB look";
 
     this.shell.classList.toggle("hud-shell--touch", usingTouch);
