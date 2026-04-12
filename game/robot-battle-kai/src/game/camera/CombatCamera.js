@@ -32,6 +32,7 @@ export class CombatCamera {
     this.freeLookTimer = 0;
     this.lockSide = 1;
     this.baseFov = camera.fov;
+    this.wasLockedLastFrame = false;
 
     this.tmpPlayerAnchor = new THREE.Vector3();
     this.tmpBossPoint = new THREE.Vector3();
@@ -178,6 +179,33 @@ export class CombatCamera {
     }
   }
 
+  syncFreeLookFromForward(sourceForward) {
+    this.tmpCameraDirection.copy(sourceForward);
+
+    if (
+      !isFiniteVector(this.tmpCameraDirection) ||
+      this.tmpCameraDirection.lengthSq() < 0.0001
+    ) {
+      this.tmpCameraDirection.copy(this.currentForward);
+    }
+
+    if (
+      !isFiniteVector(this.tmpCameraDirection) ||
+      this.tmpCameraDirection.lengthSq() < 0.0001
+    ) {
+      this.tmpCameraDirection.set(0, 0, -1);
+    } else {
+      this.tmpCameraDirection.normalize();
+    }
+
+    this.lookYaw = Math.atan2(this.tmpCameraDirection.x, this.tmpCameraDirection.z);
+    this.lookPitch = THREE.MathUtils.clamp(
+      Math.asin(THREE.MathUtils.clamp(this.tmpCameraDirection.y, -0.999, 0.999)),
+      this.config.freePitchMin,
+      this.config.freePitchMax,
+    );
+  }
+
   projectPointToFrameNdc(point, position, lookTarget, target = new THREE.Vector3()) {
     this.ndcProbeCamera.fov = this.camera.fov;
     this.ndcProbeCamera.aspect = this.camera.aspect;
@@ -286,8 +314,9 @@ export class CombatCamera {
   snap({ input = { lookX: 0, lookY: 0 }, player, lockTarget, arena }) {
     const playerAnchor = player.getCameraAnchor(this.tmpPlayerAnchor);
     const airborneFactor = this.getAirborneFactor(player, arena);
+    const isLocked = Boolean(lockTarget?.isAlive());
 
-    if (lockTarget?.isAlive()) {
+    if (isLocked) {
       this.updateLockedCamera(1 / 60, player, playerAnchor, lockTarget, arena, airborneFactor);
     } else {
       this.updateFreeCamera(1 / 60, input, player, playerAnchor, arena, airborneFactor);
@@ -308,14 +337,16 @@ export class CombatCamera {
     }
 
     this.applyCameraState(player);
+    this.wasLockedLastFrame = isLocked;
   }
 
   update(deltaSeconds, { input, player, lockTarget, arena }) {
     const playerAnchor = player.getCameraAnchor(this.tmpPlayerAnchor);
     const airborneFactor = this.getAirborneFactor(player, arena);
     const jetTrackingBoost = player.state === locomotionStates.jet ? this.config.jetTrackingBoost : 0;
+    const isLocked = Boolean(lockTarget?.isAlive());
 
-    if (lockTarget?.isAlive()) {
+    if (isLocked) {
       this.updateLockedCamera(
         deltaSeconds,
         player,
@@ -354,6 +385,7 @@ export class CombatCamera {
     }
 
     this.applyCameraState(player, deltaSeconds);
+    this.wasLockedLastFrame = isLocked;
   }
 
   updateFreeCamera(deltaSeconds, input, player, playerAnchor, arena, airborneFactor) {
@@ -365,25 +397,25 @@ export class CombatCamera {
         )
       : 0;
 
+    if (this.wasLockedLastFrame) {
+      this.syncFreeLookFromForward(this.currentForward);
+      this.freeLookTimer = 0;
+    }
+
+    const lookSensitivity = input.usingTouch
+      ? this.config.mobileLookSensitivity
+      : this.config.freeLookSensitivity;
+
     if (input.lookX !== 0 || input.lookY !== 0) {
-      this.lookYaw -= input.lookX * this.config.freeLookSensitivity;
+      this.lookYaw -= input.lookX * lookSensitivity;
       this.lookPitch = THREE.MathUtils.clamp(
-        this.lookPitch - input.lookY * this.config.freeLookSensitivity,
+        this.lookPitch - input.lookY * lookSensitivity,
         this.config.freePitchMin,
         this.config.freePitchMax,
       );
       this.freeLookTimer = 1.7;
     } else {
       this.freeLookTimer = Math.max(0, this.freeLookTimer - deltaSeconds);
-    }
-
-    const playerForward = player.getForwardVector(this.tmpForward);
-    const desiredYaw = Math.atan2(playerForward.x, playerForward.z);
-
-    const allowAutoFollow = input.moveY >= -0.15;
-
-    if (this.freeLookTimer <= 0 && allowAutoFollow) {
-      this.lookYaw = dampAngle(this.lookYaw, desiredYaw, this.config.followTurnSpeed, deltaSeconds);
     }
 
     const cosPitch = Math.cos(this.lookPitch);

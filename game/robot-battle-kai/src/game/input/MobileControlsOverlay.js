@@ -36,6 +36,7 @@ export class MobileControlsOverlay {
     this.lockToggleQueued = 0;
     this.lookX = 0;
     this.lookY = 0;
+    this.hoverArmed = false;
 
     this.joystickPointerId = null;
     this.lookPointerId = null;
@@ -56,31 +57,31 @@ export class MobileControlsOverlay {
 
         <div class="mobile-joystick-cluster">
           <div class="mobile-cluster-card">
-            <div class="mobile-cluster-header">
-              <div class="mobile-label">Drive</div>
-              <div class="mobile-caption">Move</div>
-            </div>
             <div class="mobile-joystick-shell">
               <div class="mobile-joystick-thumb"></div>
             </div>
           </div>
         </div>
 
-        <div class="mobile-right-cluster">
-          <div class="mobile-cluster-card mobile-cluster-card--flight">
-            <div class="mobile-vertical-control">
-              <div class="mobile-label">Altitude</div>
-              <div class="mobile-caption">Ascend / Descend</div>
+        <div class="mobile-vertical-cluster">
+          <div class="mobile-cluster-card">
+            <div class="mobile-vertical-control" aria-label="Altitude control">
               <div class="mobile-vertical-track">
                 <div class="mobile-vertical-thumb"></div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div class="mobile-action-grid">
-              <button class="mobile-action mobile-action--shoot" data-action="shoot" type="button">Shoot</button>
-              <button class="mobile-action mobile-action--jet" data-action="jet" type="button">Jet</button>
-              <button class="mobile-action mobile-action--hover" data-action="hover" type="button">Hover</button>
-              <button class="mobile-action mobile-action--lock" data-action="lock" type="button">Lock</button>
+        <div class="mobile-right-cluster">
+          <div class="mobile-cluster-card mobile-cluster-card--actions">
+            <div class="mobile-action-dock">
+              <button class="mobile-action mobile-action--shoot mobile-action--primary" data-action="shoot" type="button" aria-label="Shoot">SHOOT</button>
+              <button class="mobile-action mobile-action--jet mobile-action--primary" data-action="jet" type="button" aria-label="Jet">JET</button>
+              <div class="mobile-action-row">
+                <button class="mobile-action mobile-action--hover mobile-action--utility" data-action="hover" type="button" aria-label="Hover">HOVER</button>
+                <button class="mobile-action mobile-action--lock mobile-action--utility" data-action="lock" type="button" aria-label="Lock">LOCK</button>
+              </div>
             </div>
           </div>
         </div>
@@ -112,14 +113,13 @@ export class MobileControlsOverlay {
     this.boundLookDown = this.onLookDown.bind(this);
     this.boundLookMove = this.onLookMove.bind(this);
     this.boundLookUp = this.onLookUp.bind(this);
-    this.boundHoverClick = () => {
-      this.hoverToggleQueued += 1;
-      this.hoverButton.classList.toggle("mobile-action--armed");
-    };
-    this.boundLockClick = () => {
-      this.lockToggleQueued += 1;
+    this.boundPreventNativeSelection = (event) => {
+      event.preventDefault();
     };
 
+    this.addListener(this.container, "contextmenu", this.boundPreventNativeSelection);
+    this.addListener(this.container, "selectstart", this.boundPreventNativeSelection);
+    this.addListener(this.container, "dragstart", this.boundPreventNativeSelection);
     this.addListener(this.joystickShell, "pointerdown", this.boundJoystickDown);
     this.addListener(window, "pointermove", this.boundJoystickMove, { passive: false });
     this.addListener(window, "pointerup", this.boundJoystickUp);
@@ -141,9 +141,14 @@ export class MobileControlsOverlay {
     this.bindPressButton(this.jetButton, () => {
       this.jetPressedQueued += 1;
     });
-
-    this.addListener(this.hoverButton, "click", this.boundHoverClick);
-    this.addListener(this.lockButton, "click", this.boundLockClick);
+    this.bindPressButton(this.hoverButton, () => {
+      this.hoverToggleQueued += 1;
+      this.hoverArmed = !this.hoverArmed;
+      this.hoverButton.classList.toggle("mobile-action--armed", this.hoverArmed);
+    });
+    this.bindPressButton(this.lockButton, () => {
+      this.lockToggleQueued += 1;
+    });
   }
 
   addListener(target, type, handler, options) {
@@ -233,8 +238,10 @@ export class MobileControlsOverlay {
   applyVerificationButtonVisualState() {
     this.shootButton?.classList.remove("mobile-action--active");
     this.jetButton?.classList.remove("mobile-action--active");
-    this.hoverButton?.classList.remove("mobile-action--active", "mobile-action--armed");
+    this.hoverButton?.classList.remove("mobile-action--active");
     this.lockButton?.classList.remove("mobile-action--active");
+    this.hoverButton?.classList.toggle("mobile-action--armed", this.hoverArmed);
+    this.lockButton?.classList.toggle("mobile-action--armed", this.locked);
 
     switch (this.verificationButtonProbe) {
       case "shoot":
@@ -289,7 +296,7 @@ export class MobileControlsOverlay {
 
   updateJoystickAxis(clientX, clientY) {
     const bounds = this.joystickShell.getBoundingClientRect();
-    const radius = Math.max(22, Math.min(bounds.width, bounds.height) * 0.34);
+    const radius = Math.max(24, Math.min(bounds.width, bounds.height) * 0.42);
     const centerX = bounds.left + bounds.width * 0.5;
     const centerY = bounds.top + bounds.height * 0.5;
     const deltaX = clientX - centerX;
@@ -381,6 +388,7 @@ export class MobileControlsOverlay {
   setLockState(locked) {
     this.locked = locked;
     this.container?.classList.toggle("mobile-controls--locked", locked);
+    this.lockButton?.classList.toggle("mobile-action--armed", locked);
 
     if (locked) {
       this.lookPointerId = null;
@@ -420,6 +428,7 @@ export class MobileControlsOverlay {
     this.lockToggleQueued = 0;
     this.lookX = 0;
     this.lookY = 0;
+    this.hoverArmed = false;
     this.joystickPointerId = null;
     this.lookPointerId = null;
     this.verticalPointerId = null;
@@ -430,8 +439,8 @@ export class MobileControlsOverlay {
     this.verticalControl?.classList.remove("mobile-vertical-control--active");
     this.shootButton?.classList.remove("mobile-action--active");
     this.jetButton?.classList.remove("mobile-action--active");
-    this.hoverButton?.classList.remove("mobile-action--armed");
-    this.lockButton?.classList.remove("mobile-action--active");
+    this.hoverButton?.classList.remove("mobile-action--active", "mobile-action--armed");
+    this.lockButton?.classList.remove("mobile-action--active", "mobile-action--armed");
     this.joystickThumb?.style.setProperty("transform", "translate(-50%, -50%)");
     this.verticalThumb?.style.setProperty("transform", "translate(-50%, -50%)");
     this.applyVerificationButtonVisualState();
