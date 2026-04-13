@@ -1,0 +1,26 @@
+{
+    "name": "study-timer",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "main": "electron/main.cjs",
+    "scripts": {
+        "build": "tsc --noEmit && node ./node_modules/vite/bin/vite.js build --configLoader native",
+        "start": "npm run build && electron ."
+    },
+    "dependencies": {
+        "localforage": "1.10.0",
+        "lucide-react": "0.544.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "zustand": "5.0.11"
+    },
+    "devDependencies": {
+        "@types/react": "19.2.14",
+        "@types/react-dom": "19.2.3",
+        "@vitejs/plugin-react": "5.1.4",
+        "electron": "^36.9.5",
+        "typescript": "5.9.3",
+        "vite": "7.3.1"
+    }
+}

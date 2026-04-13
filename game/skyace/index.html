@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Sky Ace Duel 3D</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=352" />
+  <link rel="stylesheet" href="./style.css?v=352" />
+</head>
+<body class="start-menu-active">
+  <canvas id="game"></canvas>
+
+  <div id="startMenuOverlay">
+    <div class="start-menu-card">
+      <div class="start-menu-kicker">TACTICAL SORTIE</div>
+      <h1 class="start-menu-title">SKY ACE DUEL 3D</h1>
+      <p class="start-menu-copy">開始前に戦闘ルールと編成を選んで sortie を始めよう。</p>
+
+      <div class="start-menu-grid">
+        <div class="menu-control start-control" id="startModeWrap" role="group" aria-label="Match mode">
+          <span class="menu-label">MODE</span>
+          <div class="tap-buttons" id="startMode">
+            <button type="button" class="tap-btn is-active" data-match-mode="ffa" aria-pressed="true">個人戦</button>
+            <button type="button" class="tap-btn" data-match-mode="team">チーム戦</button>
+          </div>
+        </div>
+
+        <div class="menu-control start-control" id="startSoloWrap" role="group" aria-label="Free for all bot count">
+          <span class="menu-label">個人戦 BOT</span>
+          <div class="tap-buttons" id="startSoloBotCount">
+            <button type="button" class="tap-btn" data-solo-bot-count="1">1</button>
+            <button type="button" class="tap-btn is-active" data-solo-bot-count="2" aria-pressed="true">2</button>
+            <button type="button" class="tap-btn" data-solo-bot-count="3">3</button>
+            <button type="button" class="tap-btn" data-solo-bot-count="4">4</button>
+            <button type="button" class="tap-btn" data-solo-bot-count="5">5</button>
+          </div>
+        </div>
+
+        <div class="start-team-wrap" id="startTeamWrap" hidden>
+          <div class="menu-control start-control" id="startTeamAllyWrap" role="group" aria-label="Ally bot count">
+            <span class="menu-label">味方 BOT</span>
+            <div class="tap-buttons" id="startTeamAllyCount">
+              <button type="button" class="tap-btn" data-team-allies="0">0</button>
+              <button type="button" class="tap-btn is-active" data-team-allies="1" aria-pressed="true">1</button>
+              <button type="button" class="tap-btn" data-team-allies="2">2</button>
+            </div>
+          </div>
+
+          <div class="menu-control start-control" id="startTeamEnemyWrap" role="group" aria-label="Enemy bot count">
+            <span class="menu-label">敵 BOT</span>
+            <div class="tap-buttons" id="startTeamEnemyCount">
+              <button type="button" class="tap-btn" data-team-enemies="1">1</button>
+              <button type="button" class="tap-btn" data-team-enemies="2">2</button>
+              <button type="button" class="tap-btn is-active" data-team-enemies="3" aria-pressed="true">3</button>
+              <button type="button" class="tap-btn" data-team-enemies="4">4</button>
+              <button type="button" class="tap-btn" data-team-enemies="5">5</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-control start-control" id="startMapWrap" role="group" aria-label="Start menu map selection">
+          <span class="menu-label">MAP</span>
+          <div class="tap-buttons" id="startMapType">
+            <button type="button" class="tap-btn is-active" data-start-map-type="city" aria-pressed="true">CITY</button>
+            <button type="button" class="tap-btn" data-start-map-type="forest">FOREST</button>
+          </div>
+        </div>
+
+        <div class="menu-control start-control" id="startAutoLevelWrap" role="group" aria-label="Start menu auto level selection">
+          <span class="menu-label">水平補正</span>
+          <div class="tap-buttons" id="startAutoLevel">
+            <button type="button" class="tap-btn is-active" data-auto-level="on" aria-pressed="true">ON</button>
+            <button type="button" class="tap-btn" data-auto-level="off">OFF</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="startMenuNote">個人戦ではプレイヤーも bot 同士も全員が敵になります。</div>
+      <button id="startMatchBtn" type="button">START SORTIE</button>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="title">SKY ACE DUEL 3D</div>
+    <div id="health">HP 100</div>
+    <div id="ammo">AMMO 100</div>
+    <div id="boostStat">BOOST 100%</div>
+    <div id="missileWarning" hidden>MISSILE ALERT</div>
+    <button id="menuBtn" type="button" aria-expanded="false">MENU</button>
+  </div>
+
+  <div id="menuPanel">
+    <button id="restartBtn" type="button">RESTART</button>
+    <button id="startMenuBtn" type="button">START MENU</button>
+    <div class="menu-control" id="mapWrap" role="group" aria-label="Map selection">
+      <span class="menu-label">MAP</span>
+      <div class="tap-buttons" id="mapType">
+        <button type="button" class="tap-btn is-active" data-map-type="city" aria-pressed="true">CITY</button>
+        <button type="button" class="tap-btn" data-map-type="forest">FOREST</button>
+      </div>
+    </div>
+    <div class="menu-control" id="autoLevelWrap" role="group" aria-label="Auto level selection">
+      <span class="menu-label">水平補正</span>
+      <div class="tap-buttons" id="autoLevel">
+        <button type="button" class="tap-btn is-active" data-auto-level="on" aria-pressed="true">ON</button>
+        <button type="button" class="tap-btn" data-auto-level="off">OFF</button>
+      </div>
+    </div>
+    <label class="menu-control" id="zoomWrap" for="zoomSlider">
+      <span class="menu-label">ZOOM</span>
+      <input id="zoomSlider" type="range" min="0" max="100" step="1" value="0" aria-label="Zoom" />
+    </label>
+  </div>
+
+  <div id="cockpitOverlay" aria-hidden="true">
+    <img id="cockpitFrame" src="./assets/ChatGPT_Image_skyace.svg" alt="" decoding="async" />
+    <div id="gunsightGlass" aria-hidden="true"></div>
+  </div>
+
+  <div id="crosshair" aria-hidden="true"></div>
+  <div id="lockOnCue" hidden>LOCK ON</div>
+  <div id="message" hidden></div>
+  <div id="buildDebug" aria-hidden="true"></div>
+
+  <div id="mobileControls" aria-label="mobile controls">
+    <div class="stick-wrap" id="leftStickWrap">
+      <div class="stick-label">TURN / PITCH</div>
+      <div class="stick" id="leftStick"><div class="knob"></div></div>
+    </div>
+
+    <div class="action-wrap">
+      <div class="weapon-buttons">
+        <button id="lockCancelBtn" class="action action-sub" hidden>LAUNCH</button>
+        <button id="missileBtn" class="action">LOCK ON</button>
+        <button id="fireBtn" class="action">FIRE</button>
+      </div>
+      <div class="lever-wrap">
+        <div class="stick-label">BOOST LEVER</div>
+        <div class="lever" id="boostLever"><div class="lever-knob"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="rotateHint" hidden>
+    Rotate your device to landscape for the best experience.
+    <small>If browser UI is intrusive, launch from your home screen for a more full-screen view.</small>
+  </div>
+
+<script type="module" src="./main.js?v=352"></script>
+</body>
+</html>
+
+
+
+
+
