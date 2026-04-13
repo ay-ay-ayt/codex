@@ -37,3 +37,4 @@ For full license tracking and internal dependency records, see `THIRD_PARTY.md`.
   - Source: https://sketchfab.com/3d-models/mech-robot-kw-ii-3e7c3f1584724587b976332ccaf4edb3
   - License: CC BY 4.0
   - Attribution: "Mech Robot ""KW-II""" (https://skfb.ly/oHVOp) by swds321 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+  - Notes: Used in-game with runtime presentation and gameplay integration adjustments.
