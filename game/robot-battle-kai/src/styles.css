@@ -161,8 +161,8 @@ select {
 .hud-shell--touch {
   --touch-top-inset: max(0.55rem, env(safe-area-inset-top));
   --touch-left-inset: max(0.55rem, env(safe-area-inset-left));
-  --touch-player-width: clamp(11rem, 34vw, 13.2rem);
-  --touch-player-compact-width: clamp(10rem, 37vw, 12rem);
+  --touch-player-width: clamp(12.2rem, 38vw, 14.2rem);
+  --touch-player-compact-width: clamp(10.9rem, 40vw, 12.8rem);
 }
 
 .hud-shell--touch .hud-panel {
@@ -308,15 +308,16 @@ select {
   left: var(--touch-left-inset);
   width: var(--touch-player-width);
   min-width: 10rem;
-  padding: 0.52rem 0.68rem 0.58rem;
+  padding: 0.52rem 0.72rem 0.58rem;
 }
 
 .hud-shell--touch .hud-panel--boss {
   top: var(--touch-top-inset);
-  left: 50%;
-  width: min(17rem, calc(100vw - 13.2rem));
+  left: calc(var(--touch-left-inset) + var(--touch-player-width) + 0.28rem);
+  right: max(0.55rem, env(safe-area-inset-right));
+  width: auto;
   padding: 0.5rem 0.64rem;
-  transform: translateX(-58%);
+  transform: none;
 }
 
 .hud-shell--touch .hud-panel__eyebrow {
@@ -333,13 +334,13 @@ select {
 }
 
 .hud-shell--touch .hud-bars {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.42rem;
+  grid-template-columns: 1fr;
+  gap: 0.34rem;
   margin-top: 0.42rem;
 }
 
 .hud-shell--touch .hud-bar {
-  gap: 0.42rem;
+  gap: 0.46rem;
   min-width: 0;
 }
 
@@ -357,8 +358,7 @@ select {
 }
 
 .hud-shell--touch .hud-status-row {
-  gap: 0.32rem;
-  margin-top: 0.45rem;
+  display: none;
 }
 
 .hud-shell--touch .hud-chip {
@@ -375,7 +375,7 @@ select {
 }
 
 .hud-shell--touch .hud-panel--boss.hud-panel--hidden {
-  transform: translateX(-58%) translateY(-0.8rem);
+  transform: translateY(-0.8rem);
 }
 
 .hud-shell--touch .hud-reticle__ring {
@@ -630,10 +630,10 @@ select {
   --mobile-edge-right: max(0.75rem, env(safe-area-inset-right));
   --mobile-edge-bottom: max(0.8rem, env(safe-area-inset-bottom));
   --mobile-gap: clamp(0.36rem, 1.5vw, 0.62rem);
-  --mobile-pad-size: clamp(6.6rem, 24vw, 8.4rem);
-  --mobile-thumb-size: clamp(2.35rem, 8.6vw, 3rem);
+  --mobile-pad-size: clamp(7.3rem, 27vw, 9rem);
+  --mobile-thumb-size: clamp(2.5rem, 9vw, 3.2rem);
   --mobile-vertical-width: clamp(2.7rem, 7vw, 3.25rem);
-  --mobile-vertical-height: clamp(7rem, 18vh, 8.9rem);
+  --mobile-vertical-height: clamp(8.4rem, 22vh, 10.6rem);
   --mobile-primary-width: clamp(4.15rem, 13.6vw, 5.1rem);
   --mobile-primary-height: clamp(4.15rem, 13.6vw, 5.1rem);
   --mobile-utility-width: clamp(3.25rem, 9.6vw, 3.95rem);
@@ -661,7 +661,7 @@ select {
 .mobile-look-zone {
   position: absolute;
   top: 0;
-  left: min(31vw, 10rem);
+  left: min(34vw, 11.6rem);
   right: calc(var(--mobile-edge-right) + var(--mobile-vertical-width) + 0.9rem);
   bottom:
     calc(
@@ -694,7 +694,7 @@ select {
 }
 
 .mobile-right-cluster {
-  bottom: var(--mobile-edge-bottom);
+  bottom: calc(var(--mobile-edge-bottom) + 0.42rem);
   right: var(--mobile-edge-right);
 }
 
@@ -807,8 +807,8 @@ select {
   display: grid;
   grid-template-columns: repeat(2, auto);
   grid-template-areas:
-    "shoot jet"
     "utility utility";
+    "shoot jet";
   justify-items: end;
   gap: calc(var(--mobile-gap) * 0.85);
 }
@@ -819,6 +819,7 @@ select {
   grid-template-columns: repeat(2, auto);
   justify-content: end;
   gap: calc(var(--mobile-gap) * 0.8);
+  margin-bottom: 0.04rem;
 }
 
 .mobile-action {
@@ -915,8 +916,9 @@ select {
   }
 
   .hud-shell--touch .hud-panel--boss {
-    left: calc(var(--touch-left-inset) + var(--touch-player-compact-width) + 0.48rem);
-    width: calc(100vw - var(--touch-left-inset) - var(--touch-player-compact-width) - 4.9rem);
+    left: calc(var(--touch-left-inset) + var(--touch-player-compact-width) + 0.24rem);
+    right: max(0.55rem, env(safe-area-inset-right));
+    width: auto;
     min-width: 9rem;
     transform: none;
   }
@@ -931,13 +933,17 @@ select {
     --mobile-edge-left: max(0.55rem, env(safe-area-inset-left));
     --mobile-edge-right: max(0.55rem, env(safe-area-inset-right));
     --mobile-edge-bottom: max(0.65rem, env(safe-area-inset-bottom));
-    --mobile-pad-size: clamp(6rem, 29vw, 7.1rem);
-    --mobile-thumb-size: clamp(2.15rem, 10vw, 2.65rem);
-    --mobile-vertical-height: clamp(6.3rem, 17vh, 7.7rem);
+    --mobile-pad-size: clamp(6.8rem, 32vw, 7.9rem);
+    --mobile-thumb-size: clamp(2.3rem, 10vw, 2.85rem);
+    --mobile-vertical-height: clamp(8rem, 24vh, 9.6rem);
     --mobile-primary-width: clamp(3.95rem, 18vw, 4.5rem);
     --mobile-primary-height: clamp(3.95rem, 18vw, 4.5rem);
     --mobile-utility-width: clamp(3rem, 13vw, 3.45rem);
     --mobile-utility-height: clamp(2.45rem, 11vw, 2.9rem);
+  }
+
+  .mobile-right-cluster {
+    bottom: calc(var(--mobile-edge-bottom) + 0.55rem);
   }
 
   .hud-shell--touch .hud-panel__eyebrow {
@@ -945,14 +951,15 @@ select {
   }
 
   .hud-shell--touch .hud-panel--player {
-    width: clamp(9.5rem, 42vw, 10.6rem);
+    width: clamp(10.4rem, 46vw, 11.8rem);
     min-width: 8.9rem;
     padding: 0.46rem 0.55rem 0.52rem;
   }
 
   .hud-shell--touch .hud-panel--boss {
-    left: calc(var(--touch-left-inset) + 9.95rem);
-    width: calc(100vw - var(--touch-left-inset) - 10.55rem);
+    left: calc(var(--touch-left-inset) + 10.68rem);
+    right: max(0.55rem, env(safe-area-inset-right));
+    width: auto;
     min-width: 8.7rem;
     padding: 0.42rem 0.55rem;
     transform: none;
@@ -982,8 +989,8 @@ select {
 
 @media (max-height: 720px) {
   .mobile-controls {
-    --mobile-pad-size: clamp(6.1rem, 24vw, 7.6rem);
-    --mobile-vertical-height: clamp(6.3rem, 18vh, 7.7rem);
+    --mobile-pad-size: clamp(6.8rem, 28vw, 8.2rem);
+    --mobile-vertical-height: clamp(7.6rem, 22vh, 9rem);
     --mobile-primary-height: clamp(3.85rem, 9vh, 4.45rem);
   }
 }

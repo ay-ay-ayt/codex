@@ -80,6 +80,15 @@
       .desc {
         margin-top: 6px;
       }
+      .card.is-disabled {
+        cursor: default;
+        opacity: 0.86;
+      }
+      .card.is-disabled:hover {
+        transform: none;
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
     </style>
   </head>
   <body>
@@ -92,6 +101,10 @@
           <div class="title">robot-battle-kai</div>
           <p class="desc">3D robot air-combat boss battle vertical slice.</p>
         </a>
+        <div class="card is-disabled" aria-disabled="true">
+          <div class="title">skydive</div>
+          <p class="desc">Currently being rebuilt from scratch as a new city skydive project.</p>
+        </div>
         <a class="card" href="./skyace/">
           <div class="title">skyace</div>
           <p class="desc">3D dogfight project with solo and team battle modes.</p>

@@ -42,39 +42,39 @@ function isFiniteEuler(euler) {
 const lowerBodyFacingDeformBonePattern =
   /^DEF-(?:LEG|SHIN|KNEE|FOOT-ALONG-[XY]|TOE-(?:FRONT|BACK|IN|OUT|PLATE-FRONT)|SHIN-PISTON-(?:IN|OUT)|ANKLE-PISTON-(?:IN|OUT))\.[LR](?:_|$)/i;
 
-function createAdditiveMaterial({ color, opacity }) {
+function createAdditiveMaterial({ color, opacity, depthTest = false }) {
   return new THREE.MeshBasicMaterial({
     color,
     transparent: true,
     opacity,
-    depthTest: false,
+    depthTest,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide,
   });
 }
 
-function createFlameSheetMaterial({ color, opacity, texture }) {
+function createFlameSheetMaterial({ color, opacity, texture, depthTest = false }) {
   return new THREE.MeshBasicMaterial({
     color,
     map: texture,
     alphaMap: texture,
     transparent: true,
     opacity,
-    depthTest: false,
+    depthTest,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide,
   });
 }
 
-function createFlameSpriteMaterial({ color, opacity, texture }) {
+function createFlameSpriteMaterial({ color, opacity, texture, depthTest = false }) {
   return new THREE.SpriteMaterial({
     color,
     map: texture,
     transparent: true,
     opacity,
-    depthTest: false,
+    depthTest,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
@@ -265,6 +265,7 @@ export class PlayerActor {
     this.isAlive = true;
     this.damageFlash = 0;
     this.jetTimer = 0;
+    this.jetExitToHover = false;
 
     this.position = this.group.position;
     this.velocity = new THREE.Vector3();
@@ -374,6 +375,7 @@ export class PlayerActor {
     this.tmpFallbackForward = new THREE.Vector3();
     this.tmpFallbackRight = new THREE.Vector3();
     this.tmpFallbackOffset = new THREE.Vector3();
+    this.tmpJetPlanarDirection = new THREE.Vector3();
     this.thrusterAxisUp = new THREE.Vector3(0, 1, 0);
     this.tmpAxis = new THREE.Vector3(1, 0, 0);
 
@@ -1231,14 +1233,16 @@ export class PlayerActor {
     if (!this.thrusterVisuals.side[0]) {
       this.thrusterVisuals.side[0] = this.createThrusterVisual("side-left", 0.3);
       this.thrusterVisuals.side[1] = this.createThrusterVisual("side-right", 1.7);
-      this.thrusterVisuals.center = this.createThrusterVisual("center", 3.2);
+      this.thrusterVisuals.center = this.createThrusterVisual("center", 3.2, {
+        occludedByGeometry: true,
+      });
       this.thrusterVisuals.foot[0] = this.createThrusterVisual("foot-left", 4.4);
       this.thrusterVisuals.foot[1] = this.createThrusterVisual("foot-right", 5.5);
       this.hideThrusterVisuals();
     }
   }
 
-  createThrusterVisual(name, phase) {
+  createThrusterVisual(name, phase, { occludedByGeometry = false } = {}) {
     const group = new THREE.Group();
     group.name = `ThrusterVisual-${name}`;
     const outer = new THREE.Mesh(
@@ -1247,6 +1251,7 @@ export class PlayerActor {
         color: "#a8dcff",
         opacity: 0.74,
         texture: this.thrusterFlameTexture,
+        depthTest: occludedByGeometry,
       }),
     );
     const outerCross = outer.clone();
@@ -1256,6 +1261,7 @@ export class PlayerActor {
         color: "#f9fdff",
         opacity: 0.62,
         texture: this.thrusterFlameTexture,
+        depthTest: occludedByGeometry,
       }),
     );
     const innerCross = inner.clone();
@@ -1264,6 +1270,7 @@ export class PlayerActor {
       createAdditiveMaterial({
         color: "#ffffff",
         opacity: 0.82,
+        depthTest: occludedByGeometry,
       }),
     );
     const flare = new THREE.Mesh(
@@ -1271,6 +1278,7 @@ export class PlayerActor {
       createAdditiveMaterial({
         color: "#fffaf6",
         opacity: 0.26,
+        depthTest: occludedByGeometry,
       }),
     );
     const rootGlow = new THREE.Mesh(
@@ -1278,6 +1286,7 @@ export class PlayerActor {
       createAdditiveMaterial({
         color: "#f5fbff",
         opacity: 0.34,
+        depthTest: occludedByGeometry,
       }),
     );
     const sideBillboard = new THREE.Sprite(
@@ -1285,6 +1294,7 @@ export class PlayerActor {
         color: "#c9ecff",
         opacity: 0.42,
         texture: this.thrusterFlameTexture,
+        depthTest: occludedByGeometry,
       }),
     );
     const sideBillboardCore = new THREE.Sprite(
@@ -1292,6 +1302,7 @@ export class PlayerActor {
         color: "#ffffff",
         opacity: 0.5,
         texture: this.thrusterFlameTexture,
+        depthTest: occludedByGeometry,
       }),
     );
     outerCross.rotation.y = Math.PI * 0.5;
@@ -1677,11 +1688,11 @@ export class PlayerActor {
       footJetAnchors: [
         {
           position: this.getFootJetWorldPosition(0, new THREE.Vector3()).clone(),
-          direction: this.getFootJetExhaustDirection(new THREE.Vector3()).clone(),
+          direction: this.getFootJetExhaustDirection(0, new THREE.Vector3()).clone(),
         },
         {
           position: this.getFootJetWorldPosition(1, new THREE.Vector3()).clone(),
-          direction: this.getFootJetExhaustDirection(new THREE.Vector3()).clone(),
+          direction: this.getFootJetExhaustDirection(1, new THREE.Vector3()).clone(),
         },
       ],
       rawGunAnchors: [
@@ -1773,13 +1784,15 @@ export class PlayerActor {
   }
 
   getCenterJetExhaustDirection(target = new THREE.Vector3()) {
-    const backwardWeight = this.state === locomotionStates.jet ? 0.52 : 0.34;
-    return this.getModelWorldDirectionFromLocal(0, -1, -backwardWeight, target);
+    const backwardWeight = this.state === locomotionStates.jet ? 0.4 : 0.24;
+    return this.getModelWorldDirectionFromLocal(0, -1, backwardWeight, target);
   }
 
-  getFootJetExhaustDirection(target = new THREE.Vector3()) {
-    const backwardWeight = this.state === locomotionStates.jet ? 0.26 : 0.14;
-    return this.getModelWorldDirectionFromLocal(0, -1, -backwardWeight, target);
+  getFootJetExhaustDirection(index, target = new THREE.Vector3()) {
+    const backwardWeight = this.state === locomotionStates.jet ? 0.07 : 0.035;
+    const outwardWeight = this.state === locomotionStates.jet ? 0.06 : 0.035;
+    const outwardX = index === 0 ? outwardWeight : -outwardWeight;
+    return this.getModelWorldDirectionFromLocal(outwardX, -1, backwardWeight, target);
   }
 
   getForwardVector(target = new THREE.Vector3()) {
@@ -1817,11 +1830,12 @@ export class PlayerActor {
     this.state = locomotionStates.ground;
     this.hoverLatched = false;
     this.isAlive = true;
-      this.damageFlash = 0;
-      this.jetTimer = 0;
-      this.moveIntentMagnitude = 0;
-      this.lowerBodyYaw = 0;
-      this.presentationTime = 0;
+    this.damageFlash = 0;
+    this.jetTimer = 0;
+    this.jetExitToHover = false;
+    this.moveIntentMagnitude = 0;
+    this.lowerBodyYaw = 0;
+    this.presentationTime = 0;
     this.locomotionMode = "idle";
     this.velocity.set(0, 0, 0);
     this.horizontalVelocity.set(0, 0, 0);
@@ -1872,32 +1886,43 @@ export class PlayerActor {
       this.hoverLatched = !this.hoverLatched;
     }
 
-    const hoverIntent = this.hoverLatched || input.vertical > 0.16;
+    const hoverInputThreshold = this.config.autoHoverInputThreshold ?? 0.08;
+    const hoverInputActive = Math.abs(input.vertical) > hoverInputThreshold;
+    const upwardHoverIntent = input.vertical > hoverInputThreshold;
+    const hoverIntent = this.hoverLatched || hoverInputActive;
 
     if (input.jetPressed && this.state !== locomotionStates.jet) {
-      this.tryStartJet(moveDirection, altitude, fx);
+      this.tryStartJet(moveDirection, altitude, input, fx);
     }
 
     if (
       this.state === locomotionStates.ground &&
-      hoverIntent &&
+      upwardHoverIntent &&
       this.energy.has(this.config.hoverRelightMinimum)
     ) {
       const lift = this.config.liftoffImpulse + Math.max(0, input.vertical) * this.config.ascendImpulse;
-      this.enterHover(lift);
+      this.enterHover(lift, { latch: true });
     }
 
     if (
       this.state === locomotionStates.fall &&
-      hoverIntent &&
+      upwardHoverIntent &&
       this.energy.has(this.config.hoverRelightMinimum)
     ) {
-      this.enterHover(Math.max(this.velocity.y, 0));
+      this.enterHover(Math.max(this.velocity.y, 0), { latch: true });
     }
 
     switch (this.state) {
       case locomotionStates.ground:
-        this.updateGround(deltaSeconds, moveDirection, moveMagnitude, input, arena, groundHeight);
+        this.updateGround(
+          deltaSeconds,
+          moveDirection,
+          moveMagnitude,
+          input,
+          arena,
+          groundHeight,
+          upwardHoverIntent,
+        );
         break;
       case locomotionStates.hover:
         this.updateHover(deltaSeconds, moveDirection, moveMagnitude, input, arena, groundHeight, hoverIntent);
@@ -1971,10 +1996,11 @@ export class PlayerActor {
     this.velocity.set(0, 0, 0);
     this.horizontalVelocity.set(0, 0, 0);
     this.jetTimer = 0;
+    this.jetExitToHover = false;
     this.state = locomotionStates.ground;
   }
 
-  tryStartJet(moveDirection, altitude, fx) {
+  tryStartJet(moveDirection, altitude, input, fx) {
     if (!this.energy.has(this.energyRules.jetMinimum)) {
       return false;
     }
@@ -1985,6 +2011,9 @@ export class PlayerActor {
 
     this.state = locomotionStates.jet;
     this.jetTimer = 0;
+    this.jetExitToHover = false;
+    const verticalInput = THREE.MathUtils.clamp(input?.vertical ?? 0, -1, 1);
+    const verticalThreshold = this.config.jetVerticalInputThreshold ?? 0.16;
 
     if (moveDirection.lengthSq() > 0.01) {
       this.jetDirection.copy(moveDirection).normalize();
@@ -1998,10 +2027,36 @@ export class PlayerActor {
       }
     }
 
-    this.horizontalVelocity.copy(this.jetDirection).multiplyScalar(this.config.jetSpeed);
+    if (Math.abs(verticalInput) > verticalThreshold) {
+      const planarDirection = this.tmpJetPlanarDirection.copy(moveDirection).setY(0);
+
+      if (planarDirection.lengthSq() > 0.0001) {
+        this.jetDirection
+          .copy(planarDirection.normalize())
+          .addScaledVector(this.thrusterAxisUp, verticalInput)
+          .normalize();
+      } else {
+        this.jetDirection.set(0, Math.sign(verticalInput), 0);
+      }
+
+      this.jetExitToHover = verticalInput > 0;
+    }
+
+    this.horizontalVelocity
+      .copy(this.jetDirection)
+      .setY(0)
+      .multiplyScalar(this.config.jetSpeed);
     this.velocity.x = this.horizontalVelocity.x;
     this.velocity.z = this.horizontalVelocity.z;
-    this.velocity.y = altitude > 0.35 ? Math.max(this.velocity.y, 0.65) : 0;
+    const verticalJetSpeed =
+      this.jetDirection.y * this.config.jetSpeed * (this.config.jetVerticalSpeedScale ?? 0.72);
+
+    if (Math.abs(verticalJetSpeed) > 0.01) {
+      const blockGroundDive = altitude <= 0.22 && verticalJetSpeed < 0;
+      this.velocity.y = blockGroundDive ? 0 : verticalJetSpeed;
+    } else {
+      this.velocity.y = altitude > 0.35 ? Math.max(this.velocity.y, 0.65) : 0;
+    }
 
     if (fx) {
       this.spawnJetKickFx(fx);
@@ -2021,18 +2076,30 @@ export class PlayerActor {
     for (let index = 0; index < 2; index += 1) {
       fx.spawnJetBurst(
         this.getFootJetWorldPosition(index, this.tmpThrusterPosition),
-        this.getFootJetExhaustDirection(this.tmpExhaustDirection),
+        this.getFootJetExhaustDirection(index, this.tmpExhaustDirection),
         { strength: 1.15 },
       );
     }
   }
 
-  enterHover(initialVerticalVelocity) {
+  enterHover(initialVerticalVelocity, { latch = false } = {}) {
     this.state = locomotionStates.hover;
+    if (latch) {
+      this.hoverLatched = true;
+    }
+    this.jetExitToHover = false;
     this.velocity.y = Math.max(this.velocity.y, initialVerticalVelocity);
   }
 
-  updateGround(deltaSeconds, moveDirection, moveMagnitude, input, arena, groundHeight) {
+  updateGround(
+    deltaSeconds,
+    moveDirection,
+    moveMagnitude,
+    input,
+    arena,
+    groundHeight,
+    upwardHoverIntent,
+  ) {
     const fatigue = moveMagnitude > 0.05
       ? 0.72 + this.energy.spendContinuous(this.energyRules.groundMoveDrain, deltaSeconds) * 0.28
       : 1;
@@ -2056,9 +2123,9 @@ export class PlayerActor {
     this.position.addScaledVector(this.velocity, deltaSeconds);
     this.position.y = arena.sampleHeight(this.position.x, this.position.z);
 
-    if (input.vertical > 0.16 && this.energy.has(this.config.hoverRelightMinimum)) {
+    if (upwardHoverIntent && this.energy.has(this.config.hoverRelightMinimum)) {
       const lift = this.config.liftoffImpulse + input.vertical * this.config.ascendImpulse;
-      this.enterHover(lift);
+      this.enterHover(lift, { latch: true });
       this.position.y = Math.max(this.position.y, groundHeight + 0.02);
     }
   }
@@ -2067,7 +2134,13 @@ export class PlayerActor {
     const drainRatio = this.energy.spendContinuous(this.energyRules.hoverDrain, deltaSeconds);
     this.energy.recover(this.energyRules.airRegen, deltaSeconds);
 
-    if (drainRatio < 1 || (!hoverIntent && input.vertical <= 0.05)) {
+    if (drainRatio < 1) {
+      this.hoverLatched = false;
+      this.state = locomotionStates.fall;
+      return;
+    }
+
+    if (!hoverIntent) {
       this.state = locomotionStates.fall;
       return;
     }
@@ -2121,18 +2194,27 @@ export class PlayerActor {
     }
 
     if (hoverIntent && this.energy.has(this.config.hoverRelightMinimum)) {
-      this.enterHover(Math.max(this.velocity.y * 0.4, -1.6));
+      this.enterHover(Math.max(this.velocity.y * 0.4, -1.6), { latch: true });
     }
   }
 
   updateJet(deltaSeconds, arena, groundHeight, hoverIntent) {
     this.jetTimer += deltaSeconds;
 
-    this.horizontalVelocity.copy(this.jetDirection).multiplyScalar(this.config.jetSpeed);
+    this.horizontalVelocity
+      .copy(this.jetDirection)
+      .setY(0)
+      .multiplyScalar(this.config.jetSpeed);
     this.velocity.x = this.horizontalVelocity.x;
     this.velocity.z = this.horizontalVelocity.z;
 
-    if (this.position.y > groundHeight + 0.22) {
+    const verticalJetSpeed =
+      this.jetDirection.y * this.config.jetSpeed * (this.config.jetVerticalSpeedScale ?? 0.72);
+
+    if (Math.abs(verticalJetSpeed) > 0.01) {
+      const blockGroundDive = verticalJetSpeed < 0 && this.position.y <= groundHeight + 0.22;
+      this.velocity.y = blockGroundDive ? 0 : verticalJetSpeed;
+    } else if (this.position.y > groundHeight + 0.22) {
       this.velocity.y = THREE.MathUtils.damp(this.velocity.y, 0.15, 7, deltaSeconds);
     } else {
       this.velocity.y = 0;
@@ -2157,8 +2239,13 @@ export class PlayerActor {
       return;
     }
 
+    if (this.jetExitToHover && this.energy.has(this.config.hoverMaintainMinimum)) {
+      this.enterHover(Math.max(this.velocity.y, this.config.hoverLift * 0.22), { latch: true });
+      return;
+    }
+
     if (hoverIntent && this.energy.has(this.config.hoverMaintainMinimum)) {
-      this.enterHover(Math.max(this.velocity.y, 0));
+      this.enterHover(Math.max(this.velocity.y, 0), { latch: true });
       return;
     }
 
@@ -2167,10 +2254,16 @@ export class PlayerActor {
 
   land(arena, carrySpeed = 0) {
     this.state = locomotionStates.ground;
+    this.jetExitToHover = false;
     this.position.y = arena.sampleHeight(this.position.x, this.position.z);
 
     if (carrySpeed > 0) {
-      this.horizontalVelocity.copy(this.jetDirection).multiplyScalar(carrySpeed);
+      this.horizontalVelocity.copy(this.jetDirection).setY(0);
+
+      if (this.horizontalVelocity.lengthSq() > 0.0001) {
+        this.horizontalVelocity.normalize().multiplyScalar(carrySpeed);
+      }
+
       this.velocity.set(this.horizontalVelocity.x, 0, this.horizontalVelocity.z);
       return;
     }
@@ -2473,7 +2566,7 @@ export class PlayerActor {
 
     for (let index = 0; index < 2; index += 1) {
       const footWorldPosition = this.getFootJetWorldPosition(index, this.tmpAnchorA);
-      const footDirection = this.getFootJetExhaustDirection(this.tmpAnchorB);
+      const footDirection = this.getFootJetExhaustDirection(index, this.tmpAnchorB);
       this.setThrusterVisual(
         this.thrusterVisuals.foot[index],
         this.copyWorldPointToThrusterLocal(footWorldPosition, this.tmpLocalPort),

@@ -18,7 +18,7 @@ export class HudView {
               <span class="hud-bar__value hud-value-energy">000</span>
             </div>
           </div>
-          <div class="hud-status-row">
+          <div class="hud-status-row" aria-hidden="true">
             <span class="hud-chip hud-state-chip">Ground</span>
             <span class="hud-chip hud-lock-chip">LOCK: ON</span>
           </div>

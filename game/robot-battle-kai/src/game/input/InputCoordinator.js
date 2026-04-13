@@ -21,14 +21,18 @@ export class InputCoordinator {
     this.boundPointerDown = this.onPointerDown.bind(this);
     this.boundPointerMove = this.onPointerMove.bind(this);
     this.boundPointerUp = this.onPointerUp.bind(this);
+    this.boundMouseDown = this.onMouseDown.bind(this);
+    this.boundMouseUp = this.onMouseUp.bind(this);
     this.boundContextMenu = (event) => event.preventDefault();
 
     window.addEventListener("keydown", this.boundKeyDown);
     window.addEventListener("keyup", this.boundKeyUp);
     this.canvas.addEventListener("pointerdown", this.boundPointerDown);
+    this.canvas.addEventListener("mousedown", this.boundMouseDown);
     window.addEventListener("pointermove", this.boundPointerMove, { passive: false });
     window.addEventListener("pointerup", this.boundPointerUp);
     window.addEventListener("pointercancel", this.boundPointerUp);
+    window.addEventListener("mouseup", this.boundMouseUp);
     this.canvas.addEventListener("contextmenu", this.boundContextMenu);
 
     this.mobileOverlay = new MobileControlsOverlay(root, {
@@ -69,10 +73,29 @@ export class InputCoordinator {
     if (event.code === "ShiftLeft" || event.code === "ShiftRight") {
       this.jetQueued += 1;
     }
+
+    if (
+      this.isJetChordKey(event.code) &&
+      (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"))
+    ) {
+      this.jetQueued += 1;
+    }
   }
 
   onKeyUp(event) {
     this.keys.delete(event.code);
+  }
+
+  isJetChordKey(code) {
+    return (
+      code === "KeyW" ||
+      code === "KeyA" ||
+      code === "KeyS" ||
+      code === "KeyD" ||
+      code === "Space" ||
+      code === "ControlLeft" ||
+      code === "ControlRight"
+    );
   }
 
   onPointerDown(event) {
@@ -94,6 +117,23 @@ export class InputCoordinator {
   }
 
   onPointerUp(event) {
+    this.pointerButtons.delete(event.button);
+
+    if (event.button === 2) {
+      this.mouseDragging = false;
+    }
+  }
+
+  onMouseDown(event) {
+    this.pointerButtons.add(event.button);
+
+    if (event.button === 2) {
+      this.mouseDragging = true;
+      event.preventDefault();
+    }
+  }
+
+  onMouseUp(event) {
     this.pointerButtons.delete(event.button);
 
     if (event.button === 2) {
@@ -188,9 +228,11 @@ export class InputCoordinator {
     window.removeEventListener("keydown", this.boundKeyDown);
     window.removeEventListener("keyup", this.boundKeyUp);
     this.canvas.removeEventListener("pointerdown", this.boundPointerDown);
+    this.canvas.removeEventListener("mousedown", this.boundMouseDown);
     window.removeEventListener("pointermove", this.boundPointerMove);
     window.removeEventListener("pointerup", this.boundPointerUp);
     window.removeEventListener("pointercancel", this.boundPointerUp);
+    window.removeEventListener("mouseup", this.boundMouseUp);
     this.canvas.removeEventListener("contextmenu", this.boundContextMenu);
     this.mobileOverlay.dispose();
   }

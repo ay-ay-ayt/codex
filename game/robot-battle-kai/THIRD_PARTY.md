@@ -186,9 +186,9 @@ Update this file whenever a new third-party dependency or asset is added, replac
 - Creator / Publisher: swds321 / Sketchfab
 - Version: Downloaded GLB
 - Local Path: assets/models/player/mech_robot_kw_ii
-- Modified: No
+- Modified: Yes
 - Commercial Use Allowed: Yes
 - Redistribution Allowed: Yes, with attribution and license compliance
 - Attribution Required: Yes
 - Attribution Text: "Mech Robot ""KW-II""" (https://skfb.ly/oHVOp) by swds321 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
-- Notes: Manually provided user-selected player model. Integrated as the current player mech visual.
+- Notes: Manually provided user-selected player model. Bundled GLB is used as the player mech source, and the in-game integration applies runtime presentation, animation playback, attachment calibration, and gameplay-driven transforms in code. Recorded conservatively as modified for attribution clarity.
