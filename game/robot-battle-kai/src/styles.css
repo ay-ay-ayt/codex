@@ -633,7 +633,7 @@ select {
   --mobile-pad-size: clamp(7.3rem, 27vw, 9rem);
   --mobile-thumb-size: clamp(2.5rem, 9vw, 3.2rem);
   --mobile-vertical-width: clamp(2.7rem, 7vw, 3.25rem);
-  --mobile-vertical-height: clamp(8.4rem, 22vh, 10.6rem);
+  --mobile-vertical-height: clamp(10rem, 27vh, 12.8rem);
   --mobile-primary-width: clamp(4.15rem, 13.6vw, 5.1rem);
   --mobile-primary-height: clamp(4.15rem, 13.6vw, 5.1rem);
   --mobile-utility-width: clamp(3.25rem, 9.6vw, 3.95rem);
@@ -695,7 +695,7 @@ select {
 
 .mobile-right-cluster {
   bottom: calc(var(--mobile-edge-bottom) + 0.42rem);
-  right: var(--mobile-edge-right);
+  right: calc(var(--mobile-edge-right) - 0.18rem);
 }
 
 .mobile-cluster-card {
@@ -807,10 +807,12 @@ select {
   display: grid;
   grid-template-columns: repeat(2, auto);
   grid-template-areas:
-    "utility utility";
+    "utility utility"
     "shoot jet";
+  justify-content: end;
   justify-items: end;
   gap: calc(var(--mobile-gap) * 0.85);
+  width: max-content;
 }
 
 .mobile-action-row {
@@ -818,8 +820,12 @@ select {
   display: grid;
   grid-template-columns: repeat(2, auto);
   justify-content: end;
+  justify-items: end;
+  justify-self: end;
   gap: calc(var(--mobile-gap) * 0.8);
   margin-bottom: 0.04rem;
+  margin-left: auto;
+  width: max-content;
 }
 
 .mobile-action {
@@ -935,7 +941,7 @@ select {
     --mobile-edge-bottom: max(0.65rem, env(safe-area-inset-bottom));
     --mobile-pad-size: clamp(6.8rem, 32vw, 7.9rem);
     --mobile-thumb-size: clamp(2.3rem, 10vw, 2.85rem);
-    --mobile-vertical-height: clamp(8rem, 24vh, 9.6rem);
+    --mobile-vertical-height: clamp(9.4rem, 30vh, 11.4rem);
     --mobile-primary-width: clamp(3.95rem, 18vw, 4.5rem);
     --mobile-primary-height: clamp(3.95rem, 18vw, 4.5rem);
     --mobile-utility-width: clamp(3rem, 13vw, 3.45rem);
@@ -990,7 +996,7 @@ select {
 @media (max-height: 720px) {
   .mobile-controls {
     --mobile-pad-size: clamp(6.8rem, 28vw, 8.2rem);
-    --mobile-vertical-height: clamp(7.6rem, 22vh, 9rem);
+    --mobile-vertical-height: clamp(8.9rem, 26vh, 10.6rem);
     --mobile-primary-height: clamp(3.85rem, 9vh, 4.45rem);
   }
 }
